@@ -1,0 +1,51 @@
+{
+ "pilot": {
+  "n_calls": 84,
+  "model": "qwen3.5-397b",
+  "estimator_bytes_per_token": 3.0,
+  "billed_over_estimate": {
+   "min": 0.707,
+   "median": 0.874,
+   "max": 1.125
+  },
+  "single_call_billed_over_2000": 16,
+  "isolated_billed_over_666": 0
+ },
+ "pilot_v2": {
+  "n_calls": 84,
+  "model": "qwen3.5-397b",
+  "estimator_bytes_per_token": 2.5,
+  "billed_over_estimate": {
+   "min": 0.599,
+   "median": 0.733,
+   "max": 0.9
+  },
+  "single_call_billed_over_2000": 0,
+  "isolated_billed_over_666": 0
+ },
+ "pilot_v3": {
+  "n_calls": 36,
+  "model": "qwen3.5-397b",
+  "estimator_bytes_per_token": 2.5,
+  "billed_over_estimate": {
+   "min": 0.726,
+   "median": 0.826,
+   "max": 0.901
+  },
+  "single_call_billed_over_2000": 0,
+  "isolated_billed_over_666": 0
+ },
+ "pilot_v3_gemma": {
+  "n_calls": 36,
+  "model": "gemma-4-31b-it",
+  "estimator_bytes_per_token": 2.5,
+  "billed_over_estimate": {
+   "min": 0.748,
+   "median": 0.856,
+   "max": 0.932
+  },
+  "single_call_billed_over_2000": 0,
+  "isolated_billed_over_666": 0
+ },
+ "decision": "v1 pilot (estimator 3.0 B/token) overran the 2,000 cap on 16 single calls by up to 11%; estimator changed to 2.5 B/token before freezing; v2/v3 pilots show no overruns (max billed/estimate 0.93)."
+}
