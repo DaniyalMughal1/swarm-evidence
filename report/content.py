@@ -230,7 +230,7 @@ def body(N):
               f"{N.i(dl + '/families_negative')} favored lexical. **The pre-registered primary contrast is positive "
               "in point estimate but not resolved at the family level.** "
               f"With lexical evidence the model abstained on {N.i(lex2 + '/abstain_valid')} of 60 "
-              "trajectories, reporting that the lineage was not visible. With dependency evidence it gave violation "
+              "trajectories, reporting insufficient evidence. With dependency evidence it gave violation "
               f"verdicts on {N.i(dep2 + '/verdict_violation_tp')} of 30 violations but also on "
               f"{N.i(dep2 + '/verdict_violation_fp')} of 30 legitimate twins (counts at calibrated thresholds: "
               "Appendix D)." + (" At 2,000 tokens no call exceeded its cap" if overruns == 0 else
@@ -248,8 +248,8 @@ def body(N):
               f"{N.get(fa + '/mean_input_tokens'):.0f} billed input tokens, "
               f"{N.get(fa + '/mean_input_tokens') / N.get(dep2 + '/mean_input_tokens'):.1f}× the dependency arm) "
               f"gave AUROC {N.f(fa + '/auroc')}: the model flagged {N.i(fa + '/verdict_violation_fp')} of 30 "
-              f"legitimate twins. {N.i(fa + '/fp_citing_unrelated_work')} of those {N.i(fa + '/fp_total')} false "
-              "alarms cited real events from unrelated legitimate work, such as payment entries or exceptions "
+              f"legitimate twins. Of those {N.i(fa + '/fp_total')} false alarms, {N.i(fa + '/fp_citing_unrelated_work')} "
+              "cited real events from unrelated legitimate work, such as payment entries or exceptions "
               f"belonging to other tasks, and {N.i(fa + '/fp_citing_unshown_ids')} cited event IDs that do not occur "
               "in the log; "
               + (f"none of the dependency arm's {N.i(dep2 + '/fp_total')} false alarms did either. "
@@ -285,7 +285,7 @@ def body(N):
         ("p", "The rule monitor scored "
               f"{N.f('offline_test/dependency@2000@full/rule_auroc')} on the dependency selections that gave the LLM "
               f"{N.f(dep2 + '/auroc')}, with {N.i('offline_test/dependency@2000@full/rule_fp')} false positives; per-family "
-              f"results are in Table 2. {q_role_fp} of the LLM's {N.i(dep2 + '/verdict_violation_fp')} false alarms fall in two "
+              f"results are in Table 2. Of the LLM's {N.i(dep2 + '/verdict_violation_fp')} false alarms, {q_role_fp} fall in two "
               "families whose legitimate twins hinge on a policy clause about roles: a lookup join's or a "
               "deduplication filter's *reference* input does not carry records (A4, B2). The model's stated reasons "
               "cite the restricted or held-out source as reaching the target, which the policy rules out: retrieval "
@@ -305,8 +305,7 @@ def body(N):
               f"{N.f(oo + '/dependency|C4_out_of_lineage/auroc')}), and so did the optimistic rule monitor. On the five "
               "in-lineage held-out families, the LLM with dependency evidence reached AUROC "
               f"{N.f(oo + '/dependency|other_test_families/auroc')}. Backward lineage misses constraints that "
-              "aggregate over sibling consumers, such as invoice totals (tested here) and, by the same logic, budgets or "
-              "rate limits (not tested)."),
+              "aggregate over sibling consumers, such as the invoice totals tested here."),
     ]
     dl6 = f"{Q}/contrasts/dependency-lexical@6000"
     v = f"{Q}/visibility"
@@ -333,13 +332,12 @@ def body(N):
     b += [
         ("h2", "5. Discussion and Limitations"),
         ("p", "**What the results mean.** Under a tight budget, following recorded lineage is a cheap retrieval "
-              "step: it keeps almost all decisive evidence at a fraction of a full review's tokens, which non-graph "
-              "retrieval cannot do at small caps. For the primary monitor, better context did not yield proportionally "
+              "step: it keeps almost all decisive evidence at a fraction of a full review's tokens, which the non-graph "
+              "baselines tested here did not do at the small cap. For the primary monitor, better context did not yield proportionally "
               "better detection: on the same evidence a short deterministic checker made no false alarms, while Qwen "
               "flagged every legitimate twin in the two role-dependent families. "
               + ("The second model made none of these errors, so this judgment gap belongs to Qwen in this setting, "
-                 "not to LLM monitors in general: lineage selection supplies the right evidence, and the judge "
-                 "decides whether it is used. "
+                 "not to LLM monitors in general. "
                  if gemma_ready(N) and role_fp(N, G) == 0 else "")
               + "Lineage selection also has predictable "
               "blind spots (aggregate constraints over sibling consumers, missing metadata), so a deployed monitor "
@@ -357,7 +355,7 @@ def body(N):
         ("h2", "6. Conclusion"),
         ("p", "At a fixed context budget, selecting evidence through recorded artifact dependencies retained "
               f"{N.pct(dep2 + '/gold_recall')} of decisive cross-agent evidence where lexical retrieval retained "
-              f"{N.pct(lex2 + '/gold_recall')}. With the primary monitor the detection gain ({N.f(dep2 + '/auroc')} "
+              f"{N.pct(lex2 + '/gold_recall')}. With the primary monitor the AUROC difference ({N.f(dep2 + '/auroc')} "
               f"versus {N.f(lex2 + '/auroc')}) is unresolved; most of its false alarms ({q_role} of "
               f"{N.i(dep2 + '/verdict_violation_fp')}) were misapplied role rules, on evidence that a deterministic "
               f"checker scored at {N.f('offline_test/dependency@2000@full/rule_auroc')}"
@@ -489,8 +487,8 @@ def budget_paragraph(N):
     over = sum(N.get(f"{Q}/arms/{a}@6000/cap_overruns") for a in BUDGETED)
     inv = sum(N.get(f"{Q}/arms/{a}@6000/invalid") for a in BUDGETED)
     if over or inv:
-        txt += (f"At this cap {over} calls slightly exceeded the cap and {inv} case-level predictions were invalid "
-                "(details in Appendix D).")
+        txt += (f"In this full-visibility run, {over} calls slightly exceeded the cap and {inv} case-level predictions "
+                "were invalid (details, including the masking runs, in Appendix D).")
     return txt
 
 
@@ -508,6 +506,14 @@ def cap6k_details(N):
         mx = max(N.get(f"{Q}/arms/{a}@6000/max_input_tokens") for a in BUDGETED if over[a])
         txt += (f"At this cap, {join(f'{v} {LABEL[a]}' for a, v in over.items() if v)} calls billed more input than the "
                 f"6,000-token cap (at most {mx:,} tokens), because the byte-based estimate undercounts some text. ")
+    mv = [f"{Q}/visibility/{a}@6000@{v}" for a in ("dependency", "lexical") for v in ("random25", "random50", "bridges")
+          if N.has(f"{Q}/visibility/{a}@6000@{v}/cap_overruns")]
+    m_over = sum(N.get(k + "/cap_overruns") for k in mv)
+    m_inv = sum(N.get(k + "/invalid") for k in mv)
+    if m_over or m_inv:
+        mx = max([N.get(k + "/max_input_tokens") for k in mv if N.get(k + "/cap_overruns")] or [0])
+        txt += (f"In the 6,000-token masking runs, {m_over} more calls exceeded the cap"
+                + (f" (at most {mx:,} tokens)" if m_over else "") + f" and {m_inv} predictions were invalid (Table 4). ")
     if sum(inv.values()):
         resp = {a: N.get(f"{Q}/arms/{a}@6000/invalid_responses") for a in BUDGETED}
         txt += ("Invalid case-level predictions (invalid API responses), scored 0.5 under the frozen policy: "
@@ -618,6 +624,10 @@ def gemma_ready(N):
     return stage_done(N, G, "stage1") and N.has(f"{G}/contrasts/dependency-lexical@2000/diff")
 
 
+def role_count(N, M, verdict):
+    return sum(N.get(f"{M}/verdicts_by_family/dependency@2000/{f}").get(f"legit->{verdict}", 0) for f in ("A4", "B2"))
+
+
 def role_fp(N, M):
     """Legitimate twins in the role-rule families (A4, B2) given a violation verdict with dependency evidence."""
     return sum(N.get(f"{M}/verdicts_by_family/dependency@2000/{f}").get("legit->violation", 0) for f in ("A4", "B2"))
@@ -632,11 +642,11 @@ def second_model_sentence(N):
     d = N.get(gdl + "/diff")
     goo = f"{G}/out_of_lineage/dependency|C4_out_of_lineage"
     out = (f"The pre-registered second model, gemma-4-31b-it, judged the same selections differently: dependency "
-           f"AUROC {N.f(g_dep + '/auroc')} versus lexical {N.f(g_lex + '/auroc')} at 2,000 tokens (difference "
+           f"AUROC {N.f(g_dep + '/auroc')} versus lexical {N.f(g_lex + '/auroc')} at 2,000 tokens (Figure 4; difference "
            f"{sg(d)}, interval {ci(N, gdl + '/ci95_family_bootstrap')}; {N.i(gdl + '/families_positive')} of 6 "
            f"families favored dependency), with {N.i(g_dep + '/verdict_violation_tp')} true and "
            f"{N.i(g_dep + '/verdict_violation_fp')} false violation verdicts. It flagged {role_fp(N, G)} of the 10 "
-           f"role-rule legitimate twins and, like Qwen, {N.i(goo + '/violations_flagged')} of the "
+           f"role-rule legitimate twins ({role_count(N, G, 'invalid')} gave an invalid output) and, like Qwen, {N.i(goo + '/violations_flagged')} of the "
            f"{N.i(goo + '/violations_total')} C4 violations. This is a secondary result; with six held-out families "
            "it does not establish a general advantage. ")
     gf, gdf = f"{G}/arms/full@nocap", f"{G}/contrasts/dependency-full@nocap"
@@ -726,9 +736,9 @@ def hypotheses_paragraph(N):
     h5 = ("H5 (rule monitor ≥ LLM on complete lineage): "
           + (f"supported on all five in-lineage families for {scope}." if all(ok) else
              f"supported in {sum(ok)} of {len(ok)} family-model cases."))
-    return ("**Pre-registered hypotheses.** " + " ".join([h1, h2, h3, h4, h5]) + " Per-family breakdowns, false-alarm "
-            "citation counts and the identical-prompt repeat are descriptive post-freeze analyses; Appendix C runs "
-            "are exploratory.")
+    return ("**Pre-registered hypotheses.** " + " ".join([h1, h2, h3, h4, h5]) + " Per-family AUROC was pre-registered; "
+            "per-family verdict counts and rule results, false-alarm citation counts and the identical-prompt repeat "
+            "are descriptive post-freeze analyses; Appendix C runs are exploratory.")
 
 
 def reasoning_paragraph(N, R):
@@ -870,6 +880,14 @@ def sensitivity_section(N):
                 rows.append([f"{name}, {lab}", N.f(a + "/auroc"),
                              f"{N.f(a + '/auroc_valid_only')} ({N.i(a + '/n_valid')}/60)",
                              f"{N.f(a + '/auroc_missing_worst')}\u2013{N.f(a + '/auroc_missing_best')}"])
+        for arm in ("dependency", "lexical"):
+            for cap in (2000, 6000):
+                for vis, vlab in (("random25", "25% masked"), ("random50", "50% masked"), ("bridges", "bridges masked")):
+                    a = f"{M}/visibility/{arm}@{cap}@{vis}"
+                    if N.has(a + "/invalid") and N.get(a + "/invalid") > 0:
+                        rows.append([f"{name}, {LABEL[arm]}, {cap // 1000}k, {vlab}", N.f(a + "/auroc"),
+                                     f"{N.f(a + '/auroc_valid_only')} ({N.i(a + '/n_valid')}/60)",
+                                     f"{N.f(a + '/auroc_missing_worst')}\u2013{N.f(a + '/auroc_missing_best')}"])
     if not rows:
         return []
     txt = ("**Invalid-output sensitivity (pre-registered).** The frozen policy scores every invalid prediction 0.5; "
@@ -891,9 +909,10 @@ def sensitivity_section(N):
     return [("p", txt),
             ("table", ["Monitor and arm", "Frozen AUROC (invalid = 0.5)", "Valid-only AUROC (valid/60)",
                        "Worst\u2013best assignment"], rows,
-             "**Table 4.** Invalid-output sensitivity for every pre-registered arm with invalid predictions, plus "
+             "**Table 4.** Invalid-output sensitivity for every pre-registered arm, including masking conditions, with "
+             "invalid predictions, plus "
              "Gemma's lexical arm for comparison.",
-             {"size": 8, "col_widths": [2.0, 1.4, 1.5, 1.4]})]
+             {"size": 8, "col_widths": [2.35, 1.4, 1.45, 1.1]})]
 
 
 def appendix_d(N):
@@ -924,16 +943,17 @@ def appendix_d(N):
                     + join(f"{LABEL.get(a, 'full log')} {resp[a]}/{v}" for a, v in inv.items() if v)
                     + "; an isolated case is invalid if any of its three worker calls is). All are scored 0.5 under the "
                     "frozen policy. Every invalid 2,000-token response was a repetition loop (\"our our our ...\") that "
-                    f"ran to the 384-token output cap (128 for isolated calls). Of the {N.i(gf + '/invalid_responses')} "
-                    f"full-log responses, {N.i(gf + '/invalid_responses_truncated')} were long answers cut off at the "
-                    "384-token cap and the rest contained two JSON answers with commentary between them; the parser "
-                    "accepts one JSON object, optionally inside a single code fence, so fencing alone never made an "
-                    "output invalid."))
+                    f"ran to the 384-token output cap (128 for isolated calls). All {N.i(gf + '/invalid_responses')} invalid "
+                    "full-log responses began with a complete JSON answer and then added self-correction commentary "
+                    f"(\"Wait, I noticed a typo ...\"); in {N.i(gf + '/invalid_responses_truncated')} the commentary ran "
+                    "to the 384-token cap, and the " + ("other ended" if N.get(gf + '/invalid_responses') - N.get(gf + '/invalid_responses_truncated') == 1 else "others ended") + " with a second JSON answer. The parser accepts exactly "
+                    "one JSON object, optionally inside a single code fence, so the trailing text, not the fencing, "
+                    "made them invalid."))
     out.append(("fig", "figures/fig2_auroc_by_method.png", 6.3,
                 "**Figure 3.** Held-out AUROC by selection method at two input caps (primary monitor qwen3.5-397b; error "
                 "bars: 95% family-bootstrap intervals over 6 held-out families; dashed line: chance; grey line: full log "
                 "with no cap). Isolated review spends its budget on three copies of the prompt overhead and sees no "
-                "events at 2,000 tokens, so its AUROC there is exactly 0.5. The same numbers are in Table 1."))
+                "events at 2,000 tokens, so its AUROC there is exactly 0.5. The same numbers are in Tables 1 and 3."))
     if gemma_ready(N) and (ROOT / "figures/figS1_auroc_by_method_secondary.png").exists():
         g6 = stage_done(N, G, "stage3")
         out.append(("fig", "figures/figS1_auroc_by_method_secondary.png", 6.3 if g6 else 4.2,
