@@ -22,7 +22,8 @@ def row(model, arm, cap):
     off = S.get("offline_test", {}).get(f"{arm}@{cap}@full", {})
     lo, hi = a["auroc_ci_family"]
     return (f"{f(a['auroc'])} ({f(lo)}–{f(hi)})", f"{a['verdict_violation_tp']}/{a['verdict_violation_fp']}",
-            str(a["abstain_valid"]), f(a["gold_recall"]), f"{a['mean_input_tokens']:.0f}", f(off.get("rule_auroc")))
+            str(a["abstain_valid"]), str(a["invalid"]), f(a["gold_recall"]), f"{a['mean_input_tokens']:.0f}",
+            str(a["cap_overruns"]), f(off.get("rule_auroc")))
 
 
 lines = []
@@ -35,17 +36,18 @@ for model in (Q, G):
         if not rows:
             continue
         lines.append(f"\n**{model}, {cap:,}-token cap** (60 held-out trajectories, 6 unseen families)\n")
-        lines.append("| Method | AUROC (family 95% CI) | Violation verdicts TP/FP | Abstain | Gold recall | Billed input tokens | Rule monitor AUROC |")
-        lines.append("|---|---|---|---|---|---|---|")
+        lines.append("| Method | AUROC (family 95% CI) | Violation verdicts TP/FP | Abstain | Invalid | Gold recall | Billed input tokens | Over cap | Rule monitor AUROC |")
+        lines.append("|---|---|---|---|---|---|---|---|---|")
         for lab, r in rows:
             lines.append(f"| {lab} | " + " | ".join(r) + " |")
     full = S["models"][model]["arms"].get("full@nocap")
     if full and not full.get("incomplete"):
-        lines.append(f"\nFull log, no cap ({model}): AUROC {f(full['auroc'])}, mean {full['mean_input_tokens']:.0f} billed input tokens.")
+        lines.append(f"\nFull log, no cap ({model}): AUROC {f(full['auroc'])}, mean {full['mean_input_tokens']:.0f} billed input tokens, {full['invalid']} invalid outputs.")
     c = S["models"][model]["contrasts"].get("dependency-lexical@2000")
     if c:
         lo, hi = c["ci95_family_bootstrap"]
-        lines.append(f"\nPrimary contrast ({model}, 2k, full visibility): dependency − lexical AUROC = "
+        label = "Primary contrast" if model == Q else "Same contrast, secondary model"
+        lines.append(f"\n{label} ({model}, 2k, full visibility): dependency − lexical AUROC = "
                      f"{c['diff']:+.2f} (paired family bootstrap 95% CI {lo:+.2f} to {hi:+.2f}; "
                      f"{c['families_positive']} of {c['n_families']} families favour dependency).")
 cost = S["costs"]
