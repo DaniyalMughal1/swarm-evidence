@@ -71,9 +71,9 @@ def front_matter(N):
         + (f"; the pre-registered second model, Gemma 4 31B, made none of these errors, reaching "
            f"{N.f(G + '/arms/dependency@2000/auroc')} versus {N.f(G + '/arms/lexical@2000/auroc')} "
            f"({sg(N.get(G + '/contrasts/dependency-lexical@2000/diff'))} "
-           f"{ci(N, G + '/contrasts/dependency-lexical@2000/ci95_family_bootstrap')}). "
-           if gemma_ready(N) and role_fp(N, G) == 0 else ". ")
-        + f"Reading the whole log without a cap scored {N.f(fa + '/auroc')}. Dependency selection missed evidence "
+           f"{ci(N, G + '/contrasts/dependency-lexical@2000/ci95_family_bootstrap')}), a secondary result over only "
+           "six families. " if gemma_ready(N) and role_fp(N, G) == 0 else ". ")
+        + f"Reading the whole log without a cap scored {N.f(fa + '/auroc')} with Qwen. Dependency selection missed evidence "
         "outside the target's lineage and degraded without dependency metadata. Lineage selection keeps the "
         "decisive evidence cheaply; whether the monitor then uses it depended on the model."
     )
@@ -181,7 +181,7 @@ def body(N):
               "no events (we kept this frozen accounting). **Full log** (no cap) is a diagnostic reference with every event "
               "visible. Caps are 2,000 and 6,000 tokens, "
               "estimated at 2.5 bytes per token after a development pilot at 3.0 overran by up to 11%."),
-        ("fig", "figures/fig1_example.png", 5.4,
+        ("fig", "figures/fig1_example.png", 5.7,
          "**Figure 1.** A development violating trajectory (family A1, synthetic data). Each dot is a recorded "
          "event in a worker's lane; black dots are the gold minimal evidence (the restricted source registered by "
          "W3, a transform and a merge by W1, and the staged export by W2) and arrows are recorded lineage. Ticks show what "
@@ -246,11 +246,19 @@ def body(N):
               f"With lexical evidence the model abstained on {N.i(lex2 + '/abstain_valid')} of 60 "
               "trajectories, reporting that the lineage was not visible. With dependency evidence it gave violation "
               f"verdicts on {N.i(dep2 + '/verdict_violation_tp')} of 30 violations but also on "
-              f"{N.i(dep2 + '/verdict_violation_fp')} of 30 legitimate twins. " + frozen_threshold_sentence(N, dep2, lex2)
-              + (" At 2,000 tokens no call exceeded its cap" if overruns == 0 else
+              f"{N.i(dep2 + '/verdict_violation_fp')} of 30 legitimate twins (counts at calibrated thresholds: "
+              "Appendix D)." + (" At 2,000 tokens no call exceeded its cap" if overruns == 0 else
                  f" At 2,000 tokens {overruns} calls exceeded their cap")
               + (", and no output (including the full log's) was invalid." if invalid == 0
                  else f", and {invalid} outputs (including the full log's) were invalid.")),
+        ("table",
+         ["Method", "AUROC 2k (CI)", "TP/FP", "Abst.", "Recall", "Tokens", "Rule",
+          "AUROC 6k (CI)", "TP/FP", "Recall", "Rule"],
+         rows,
+         "**Table 1.** Held-out results, qwen3.5-397b (60 trajectories, 6 unseen families; CI: 95% family bootstrap). "
+         "TP/FP: violation verdicts on violating/legitimate runs; Abst.: insufficient evidence; Recall: gold evidence "
+         "shown; Tokens: mean billed input; Rule: rule-monitor AUROC on the same evidence.",
+         {"size": 7, "col_widths": [0.92, 0.98, 0.48, 0.44, 0.47, 0.5, 0.4, 0.98, 0.48, 0.47, 0.4]}),
         ("p", "**More context did not help.** Reading the whole log without a cap (mean "
               f"{N.get(fa + '/mean_input_tokens'):.0f} billed input tokens, "
               f"{N.get(fa + '/mean_input_tokens') / N.get(dep2 + '/mean_input_tokens'):.1f}× the dependency arm) "
@@ -268,17 +276,10 @@ def body(N):
               f"{ci(N, Q + '/contrasts/dependency-full@nocap/ci95_family_bootstrap')}: selection fit the budget and, "
               "in point estimate, removed distracting look-alike evidence"
               + (f" (the interval narrowly includes zero; {N.i(Q + '/contrasts/dependency-full@nocap/families_positive')} "
-                 f"of 6 families favored dependency)." if N.get(Q + '/contrasts/dependency-full@nocap/ci95_family_bootstrap/0') <= 0
-                 else ".")),
-        ("table",
-         ["Method", "AUROC 2k (CI)", "TP/FP", "Abst.", "Recall", "Tokens", "Rule",
-          "AUROC 6k (CI)", "TP/FP", "Recall", "Rule"],
-         rows,
-         "**Table 1.** Held-out results, qwen3.5-397b, 60 trajectories (30 violating) from 6 unseen families. "
-         "CI: 95% family bootstrap. TP/FP: violation verdicts on violating/legitimate runs. Abst.: "
-         "insufficient-evidence verdicts. Recall: gold evidence shown. Tokens: mean billed input. Rule: rule-monitor "
-         "AUROC on the same evidence (1.00 on the full log by the validity gate).",
-         {"size": 7, "col_widths": [0.92, 0.98, 0.48, 0.44, 0.47, 0.5, 0.4, 0.98, 0.48, 0.47, 0.4]}),
+                 f"of 6 families favored dependency)" if N.get(Q + '/contrasts/dependency-full@nocap/ci95_family_bootstrap/0') <= 0
+                 else "")
+              + ". This is one model in one synthetic setting; it does not show that more context generally makes "
+              "monitoring worse."),
     ]
     # per-family table
     fams = [("A2", "revocation"), ("A4", "join reference vs primary"), ("B2", "dedup reference vs primary"),
@@ -328,7 +329,7 @@ def body(N):
         ("h3", "4.3 Larger budgets and missing metadata"),
         ("p", budget_paragraph(N)),
         ("p", masking_paragraph(N)),
-        ("fig", "figures/fig3_budget_and_metadata.png", 5.6,
+        ("fig", "figures/fig3_budget_and_metadata.png", 6.4,
          "**Figure 2.** (a) Model-independent share of gold minimal evidence that five of the selectors keep on the 60 "
          "held-out trajectories as the input cap grows. (b, c) LLM AUROC for dependency and lexical selection when "
          "dependency relations are masked at random (25%, 50%) or at every cross-worker bridge, at the 2,000- and "
@@ -355,8 +356,9 @@ def body(N):
               "retrieval cannot do at small caps. For the primary monitor, better context did not yield proportionally "
               "better detection: on the same evidence a short deterministic checker made no false alarms, while Qwen "
               "flagged every legitimate twin in the two role-dependent families. "
-              + ("The second model made none of these errors, so the judgment gap is model-specific: lineage "
-                 "selection supplies the right evidence, and the judge decides whether it is used. "
+              + ("The second model made none of these errors, so this judgment gap belongs to Qwen in this setting, "
+                 "not to LLM monitors in general: lineage selection supplies the right evidence, and the judge "
+                 "decides whether it is used. "
                  if gemma_ready(N) and role_fp(N, G) == 0 else "")
               + "Where the policy is explicit, a deterministic check over the selected lineage can decide, "
               "with an LLM reserved for semantics the schema cannot express. Lineage selection also has predictable "
@@ -480,23 +482,31 @@ def budget_paragraph(N):
                 + ("; it " if grew and shrank else "")
                 + (f"shrank against {join(LABEL[b] + f' ({sg(sp[b][0])} to {sg(sp[b][1])})' for b in shrank)}"
                    if shrank else "") + ". ")
+    over = sum(N.get(f"{Q}/arms/{a}@6000/cap_overruns") for a in BUDGETED)
+    inv = sum(N.get(f"{Q}/arms/{a}@6000/invalid") for a in BUDGETED)
+    if over or inv:
+        txt += (f"At this cap {over} calls slightly exceeded the cap and {inv} outputs were invalid "
+                "(details in Appendix D).")
+    return txt
+
+
+def cap6k_details(N):
+    """Supporting detail for the 6,000-token stage (moved from Section 4.3)."""
+    txt = ""
     rp = f"dependency_cap_repeat/{Q.split('/', 1)[1]}"
     if N.has(rp + "/n_identical_input") and N.get(rp + "/n_identical_input") == N.get(rp + "/n_cases"):
         txt += (f"Dependency selection sent identical prompts at both caps, so its two runs are a natural repeat: "
                 f"{N.i(rp + '/n_score_changed')} of {N.i(rp + '/n_cases')} scores and "
-                f"{N.i(rp + '/n_verdict_changed')} verdicts changed at temperature 0. ")
+                f"{N.i(rp + '/n_verdict_changed')} verdicts changed at temperature 0 (descriptive, not pre-registered). ")
     over = {a: N.get(f"{Q}/arms/{a}@6000/cap_overruns") for a in BUDGETED}
     inv = {a: N.get(f"{Q}/arms/{a}@6000/invalid") for a in BUDGETED}
-    n_over = sum(over.values())
-    if n_over:
+    if sum(over.values()):
         mx = max(N.get(f"{Q}/arms/{a}@6000/max_input_tokens") for a in BUDGETED if over[a])
-        txt += f"At this cap, {n_over} non-graph calls billed more input than the cap (at most {mx:,} tokens)"
+        txt += (f"{join(f'{v} {LABEL[a]}' for a, v in over.items() if v)} calls billed more input than the "
+                f"6,000-token cap (at most {mx:,} tokens), because the byte-based estimate undercounts some text. ")
     if sum(inv.values()):
-        parts = [f"{v} {LABEL[a]}" for a, v in inv.items() if v]
-        txt += ((", and " if n_over else "At this cap, ") + f"{sum(inv.values())} outputs were invalid ("
-                + ", ".join(parts) + ("; isolated calls have a 128-token output cap)" if inv.get("isolated") else ")"))
-    if n_over or sum(inv.values()):
-        txt += "."
+        txt += (f"Invalid outputs, scored 0.5 under the frozen policy: {join(f'{v} {LABEL[a]}' for a, v in inv.items() if v)}"
+                + (" (isolated calls have a 128-token output cap per worker)." if inv.get("isolated") else "."))
     return txt
 
 
@@ -617,7 +627,13 @@ def second_model_sentence(N):
            f"families favored dependency), with {N.i(g_dep + '/verdict_violation_tp')} true and "
            f"{N.i(g_dep + '/verdict_violation_fp')} false violation verdicts. It flagged {role_fp(N, G)} of the 10 "
            f"role-rule legitimate twins and, like Qwen, {N.i(goo + '/violations_flagged')} of the "
-           f"{N.i(goo + '/violations_total')} C4 violations. ")
+           f"{N.i(goo + '/violations_total')} C4 violations. This is a secondary result; with six held-out families "
+           "it does not establish a general advantage. ")
+    gf = f"{G}/arms/full@nocap"
+    if stage_done(N, G, "stage2"):
+        out += (f"Reading the whole log, Gemma scored {N.f(gf + '/auroc')} with {N.i(gf + '/verdict_violation_fp')} "
+                "false alarms on 30 legitimate twins, so the full-log shortfall seen with Qwen "
+                + ("recurred. " if N.get(gf + "/auroc") < N.get(g_dep + "/auroc") else "did not recur. "))
     n_inv = N.get(g_dep + "/invalid") + N.get(g_lex + "/invalid")
     if n_inv:
         out += (f"Invalid outputs, scored 0.5 under the frozen policy: {N.i(g_dep + '/invalid')} in the dependency arm "
@@ -626,23 +642,20 @@ def second_model_sentence(N):
 
 
 def frozen_threshold_sentence(N, dep2, lex2):
-    """Verdict counts versus counts at the score threshold frozen on calibration families."""
+    """Counts at the score threshold frozen on calibration families (pre-registered secondary metric)."""
     if not N.has(dep2 + "/threshold_frozen"):
         return "No calibration threshold was available."
+    w = f"{N.f(dep2 + '/fpr_frozen/wilson/0')}–{N.f(dep2 + '/fpr_frozen/wilson/1')}"
+    out = (f"With dependency evidence at 2,000 tokens, the primary monitor's threshold frozen on calibration families "
+           f"({N.f(dep2 + '/threshold_frozen')}) flagged {N.i(dep2 + '/tpr_frozen/k')}/30 violations and "
+           f"{N.i(dep2 + '/fpr_frozen/k')}/30 legitimate runs (false-positive rate 95% Wilson interval {w})")
     same = (N.get(dep2 + "/tpr_frozen/k") == N.get(dep2 + "/verdict_violation_tp")
             and N.get(dep2 + "/fpr_frozen/k") == N.get(dep2 + "/verdict_violation_fp"))
-    w = f"{N.f(dep2 + '/fpr_frozen/wilson/0')}–{N.f(dep2 + '/fpr_frozen/wilson/1')}"
-    if same:
-        out = (f"Scoring at the threshold frozen on calibration families ({N.f(dep2 + '/threshold_frozen')}) gives "
-               f"the same counts (false-positive rate 95% Wilson interval {w})")
-    else:
-        out = (f"At the threshold frozen on calibration families ({N.f(dep2 + '/threshold_frozen')}) it flagged "
-               f"{N.i(dep2 + '/tpr_frozen/k')}/30 violations and {N.i(dep2 + '/fpr_frozen/k')}/30 legitimate runs "
-               f"(false-positive rate 95% Wilson interval {w})")
-    if N.has(lex2 + "/threshold_frozen") and (N.get(lex2 + "/tpr_frozen/k") or N.get(lex2 + "/fpr_frozen/k")):
-        out += (f"; the lexical arm flagged {N.i(lex2 + '/tpr_frozen/k')}/30 and {N.i(lex2 + '/fpr_frozen/k')}/30 "
-                "at its frozen threshold")
-    return out + "."
+    out += ", the same as its violation verdicts" if same else ""
+    if N.has(lex2 + "/threshold_frozen"):
+        out += (f"; with lexical evidence its threshold ({N.f(lex2 + '/threshold_frozen')}) flagged "
+                f"{N.i(lex2 + '/tpr_frozen/k')}/30 and {N.i(lex2 + '/fpr_frozen/k')}/30")
+    return out + ". Thresholds come from 15 benign calibration cases and cannot certify low false-positive rates."
 
 
 def hypotheses_paragraph(N):
@@ -690,7 +703,9 @@ def hypotheses_paragraph(N):
     h5 = ("H5 (rule monitor ≥ LLM on complete lineage): "
           + (f"supported on all five in-lineage families for {scope}." if all(ok) else
              f"supported in {sum(ok)} of {len(ok)} family-model cases."))
-    return "**Pre-registered hypotheses.** " + " ".join([h1, h2, h3, h4, h5])
+    return ("**Pre-registered hypotheses.** " + " ".join([h1, h2, h3, h4, h5]) + " Per-family verdict counts, the "
+            "false-alarm citation counts and the identical-prompt repeat are descriptive analyses added after the "
+            "freeze; the runs in Appendix C are exploratory.")
 
 
 def role_rule_persistence(N, R):
@@ -800,14 +815,19 @@ def llm_statement():
 
 
 def appendix_d(N):
-    out = [("h2", "Appendix D. Additional figures"),
-           ("fig", "figures/fig2_auroc_by_method.png", 6.0,
-            "**Figure 3.** Held-out AUROC by selection method at two input caps (primary monitor qwen3.5-397b; error "
-            "bars: 95% family-bootstrap intervals over 6 held-out families; dashed line: chance; grey line: full log "
-            "with no cap). Isolated review spends its budget on three copies of the prompt overhead and sees no "
-            "events at 2,000 tokens, so its AUROC there is exactly 0.5. The same numbers are in Table 1.")]
+    dep2, lex2 = f"{Q}/arms/dependency@2000", f"{Q}/arms/lexical@2000"
+    out = [("h2", "Appendix D. Supplementary results and figures"),
+           ("p", "**Calibrated thresholds (pre-registered secondary metric).** " + frozen_threshold_sentence(N, dep2, lex2))]
+    det = cap6k_details(N)
+    if det:
+        out.append(("p", "**6,000-token stage.** " + det))
+    out.append(("fig", "figures/fig2_auroc_by_method.png", 6.3,
+                "**Figure 3.** Held-out AUROC by selection method at two input caps (primary monitor qwen3.5-397b; error "
+                "bars: 95% family-bootstrap intervals over 6 held-out families; dashed line: chance; grey line: full log "
+                "with no cap). Isolated review spends its budget on three copies of the prompt overhead and sees no "
+                "events at 2,000 tokens, so its AUROC there is exactly 0.5. The same numbers are in Table 1."))
     if gemma_ready(N) and (ROOT / "figures/figS1_auroc_by_method_secondary.png").exists():
-        out.append(("fig", "figures/figS1_auroc_by_method_secondary.png", 6.0,
+        out.append(("fig", "figures/figS1_auroc_by_method_secondary.png", 6.3,
                     "**Figure 4.** The same for the pre-registered second model, gemma-4-31b-it. Only methods scored "
                     "on all 60 held-out trajectories are shown; invalid outputs score 0.5."))
     return out
