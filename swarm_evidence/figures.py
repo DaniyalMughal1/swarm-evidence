@@ -76,9 +76,16 @@ def fig_main(summary, model, out: Path):
     if not m:
         return
     arms = ["dependency", "lexical", "chronological", "bm25", "lexical_prf", "shuffled", "isolated"]
-    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.7), sharey=True)
+    caps = [c for c in (2000, 6000)
+            if any(m["arms"].get(f"{a}@{c}") and not m["arms"][f"{a}@{c}"].get("incomplete") for a in arms)]
+    if not caps:
+        return
+    # only caps with completed arms get a panel, so an unfinished stage never shows as an empty plot
+    fig, axes = plt.subplots(1, len(caps), figsize=(3.6 * len(caps) + 0.2 * (2 - len(caps)), 2.7), sharey=True,
+                             squeeze=False)
+    axes = axes[0]
     full = m["arms"].get("full@nocap")
-    for ax, cap in zip(axes, (2000, 6000)):
+    for ax, cap in zip(axes, caps):
         xs, hs, los, his, cs = [], [], [], [], []
         for i, arm in enumerate(arms):
             a = m["arms"].get(f"{arm}@{cap}")
@@ -107,7 +114,7 @@ def fig_main(summary, model, out: Path):
         ax.set_ylim(0, 1.05)
         _style(ax)
     axes[0].set_ylabel("held-out AUROC")
-    fig.subplots_adjust(left=0.07, right=0.99, top=0.9, bottom=0.25, wspace=0.06)
+    fig.subplots_adjust(left=0.07 if len(caps) == 2 else 0.13, right=0.99, top=0.9, bottom=0.25, wspace=0.06)
     fig.savefig(out)
     plt.close(fig)
 
