@@ -98,7 +98,9 @@ def predictions(calls):
         preds.append({
             "model": model, "arm": arm, "cap": cap, "visibility": vis, "run_id": rid, "replicate": rep,
             "stage": cs[0]["stage"], "score": score, "verdict": verdict, "valid": valid,
-            "n_calls": len(cs), "shown_ids": sorted(shown), "n_cited": len(cited), "n_unsupported": unsupported,
+            "n_calls": len(cs), "n_invalid_calls": sum(1 for q in parsed if not q.get("valid")) + max(0, n_expected - len(cs)),
+            "n_invalid_truncated": sum(1 for c, q in zip(cs, parsed) if not q.get("valid") and c["status"] == "incomplete"),
+            "shown_ids": sorted(shown), "n_cited": len(cited), "n_unsupported": unsupported,
             "cited_ids": cited_ids,
             "input_tokens": sum(c["input_tokens"] or 0 for c in cs),
             "output_tokens": sum(c["output_tokens"] or 0 for c in cs),
@@ -141,6 +143,9 @@ def arm_metrics(ps, labels, cases, gold, th=None):
            "n_families": len({cases[p['run_id']]['family'] for p in ps}),
            "auroc": auroc(sc, ys), "auroc_ci_family": [lo, hi], "auprc": auprc(sc, ys),
            "invalid": sum(1 for p in ps if not p["valid"]),
+           "invalid_responses": sum(p.get("n_invalid_calls", 0) for p in ps),
+           "invalid_responses_truncated": sum(p.get("n_invalid_truncated", 0) for p in ps),
+           "n_valid": sum(1 for p in ps if p["valid"]),
            "abstain_valid": sum(1 for p in ps if p["verdict"] == "insufficient_evidence"),
            "verdict_violation_tp": sum(1 for p, y in zip(ps, ys) if p["verdict"] == "violation" and y == 1),
            "verdict_violation_fp": sum(1 for p, y in zip(ps, ys) if p["verdict"] == "violation" and y == 0),
@@ -293,6 +298,31 @@ def run_analysis(root: Path):
                                       "violations_flagged": sum(1 for p, y in zip(q, ys) if p["verdict"] == "violation" and y),
                                       "violations_total": sum(ys)}
         m["out_of_lineage"] = oo
+        # invalid-output sensitivity for the two headline contrasts (pre-registered: valid-only and best/worst
+        # missing-score AUROC per arm; the paired common-case and extreme-assignment differences are descriptive)
+        sens = {}
+        for a_key, b_arm, b_cap in (("dependency-lexical@2000", "lexical", 2000), ("dependency-full@nocap", "full", None)):
+            da = {p["run_id"]: p for p in sel(model, "test", "dependency", 2000)}
+            ob = {p["run_id"]: p for p in sel(model, "test", b_arm, b_cap or 2000)}
+            if len(da) != len(test_ids) or set(ob) != set(da):
+                continue
+            both = sorted(r for r in da if da[r]["valid"] and ob[r]["valid"])
+            ys = [labels[r]["label"] for r in both]
+            def extreme(pp, favour):  # favour=True: invalid scored as if correct; False: as if wrong
+                return [p["score"] if p["valid"] else ((1.0 if labels[r]["label"] else 0.0) if favour
+                                                       else (0.0 if labels[r]["label"] else 1.0)) for r, p in pp]
+            rids = sorted(da)
+            yl = [labels[r]["label"] for r in rids]
+            dw = auroc(extreme([(r, da[r]) for r in rids], False), yl)
+            db = auroc(extreme([(r, da[r]) for r in rids], True), yl)
+            ow = auroc(extreme([(r, ob[r]) for r in rids], False), yl)
+            obb = auroc(extreme([(r, ob[r]) for r in rids], True), yl)
+            sens[a_key] = {
+                "n_both_valid": len(both),
+                "diff_both_valid": (auroc([da[r]["score"] for r in both], ys) - auroc([ob[r]["score"] for r in both], ys))
+                if len(set(ys)) == 2 else None,
+                "diff_worst_for_dependency": dw - obb, "diff_best_for_dependency": db - ow}
+        m["invalid_sensitivity"] = sens
         # verdict breakdown by family (error taxonomy)
         vbf = {}
         for arm in ARM_ORDER:
