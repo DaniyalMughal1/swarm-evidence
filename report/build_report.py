@@ -314,7 +314,7 @@ def main():
     render(content.body(N), doc)
     if not os.environ.get("REPORT_DRAFT"):  # a final build must not ship placeholders or missing values
         text = " ".join(doc.element.body.itertext())  # includes nested tables (author block, abstract box)
-        bad = sorted({m for m in re.findall(r"TO CONFIRM|\[AUTHOR[^\]]*\]|\bnan\b|PENDING", text)})
+        bad = sorted({m for m in re.findall(r"TO CONFIRM|\[AUTHOR[^\]]*\]|\bnan\b|PENDING|\{[A-Za-z_][^{}]*\}", text)})
         if bad:
             raise SystemExit(f"refusing final build, placeholders or missing values remain: {bad}")
     doc.save(str(OUT_DOCX))

@@ -37,9 +37,15 @@ def abstract_6k(N):
     if not N.has(dl6 + "/diff"):
         return ""
     d2, d6 = N.get(f"{Q}/contrasts/dependency-lexical@2000/diff"), N.get(dl6 + "/diff")
-    return (f"At 6,000 tokens, where the baselines saw more evidence, the difference "
-            f"{'grew' if d6 > d2 else 'shrank'} to {sg(d6)} {ci(N, dl6 + '/ci95_family_bootstrap')}"
-            + (" as their extra evidence brought false alarms. " if d6 > d2 else ". "))
+    sp = h3_split(N)
+    shrank = [b for b, (a2, a6) in sp.items() if a6 < a2 and b != "lexical"]
+    txt = ("In secondary comparisons at 6,000 tokens, extra evidence brought the baselines false alarms and the gap "
+           f"to lexical retrieval {'grew' if d6 > d2 else 'shrank'} to {sg(d6)} {ci(N, dl6 + '/ci95_family_bootstrap')}")
+    if shrank:
+        txt += ", though it narrowed against " + " and ".join(
+            {"lexical_prf": "pseudo-relevance feedback", "bm25": "BM25", "chronological": "chronological review"}[b]
+            for b in shrank)
+    return txt + ". "
 
 
 def front_matter(N):
@@ -49,20 +55,27 @@ def front_matter(N):
         "When several AI agents each take locally permitted steps, a policy violation can exist only in their "
         "composition, and a monitor with a limited context budget must choose which logged events to read. We test "
         "whether selecting evidence by walking recorded artifact dependencies backward from the action under review "
-        "beats ordinary retrieval and log review at the same budget. An executable three-worker simulator with "
-        f"state-computed labels provides {N.i('dataset/n_core_pairs')} matched violating/legitimate pairs from 12 "
-        "template families, each needing evidence from two or more workers; a pre-registered test uses "
-        f"{N.i('dataset/test_core_trajectories')} trajectories from 6 unseen families. "
-        f"At a 2,000-token cap, dependency selection kept {N.pct(Q + '/arms/dependency@2000/gold_recall')} of the "
-        f"minimal decisive evidence versus {N.pct(Q + '/arms/lexical@2000/gold_recall')} for lexical retrieval. With "
-        f"Qwen 3.5 397B as monitor, held-out AUROC was {N.f(Q + '/arms/dependency@2000/auroc')} versus "
-        f"{N.f(Q + '/arms/lexical@2000/auroc')} (difference {sg(N.get(dl + '/diff'))}; family-bootstrap 95% "
-        f"interval {ci(N, dl + '/ci95_family_bootstrap')}), and reading the whole log without a cap scored "
-        f"{N.f(fa + '/auroc')}. " + abstract_6k(N) + "On the same dependency-selected evidence a deterministic checker reached "
-        f"{N.f('offline_test/dependency@2000@full/rule_auroc')}, while the language model misapplied stated role "
-        "rules. Dependency selection missed decisive evidence outside the target's lineage and degraded when "
-        "dependency metadata was removed. Lineage-guided selection is a cheap retrieval step, but in our setting the "
-        "monitor's judgment limited detection more than its context did."
+        "beats ordinary retrieval at the same budget. An executable three-worker simulator with state-computed "
+        f"labels provides {N.i('dataset/n_core_pairs')} matched violating/legitimate pairs from 12 template families, "
+        "each needing evidence from two or more workers; a pre-registered test uses "
+        f"{N.i('dataset/test_core_trajectories')} trajectories from 6 unseen families. At a 2,000-token cap, "
+        f"dependency selection kept {N.pct(Q + '/arms/dependency@2000/gold_recall')} of the decisive evidence versus "
+        f"{N.pct(Q + '/arms/lexical@2000/gold_recall')} for lexical retrieval. With the primary monitor, Qwen 3.5 "
+        f"397B, held-out AUROC was {N.f(Q + '/arms/dependency@2000/auroc')} versus {N.f(Q + '/arms/lexical@2000/auroc')}, "
+        f"but the family-bootstrap interval for the difference ({sg(N.get(dl + '/diff'))} "
+        f"{ci(N, dl + '/ci95_family_bootstrap')}) "
+        + ("includes zero, so the primary contrast is unresolved. " if N.get(dl + '/ci95_family_bootstrap/0') <= 0
+           else "excludes zero. ")
+        + "Qwen misapplied stated role rules on evidence that a deterministic checker scored at "
+        f"{N.f('offline_test/dependency@2000@full/rule_auroc')}"
+        + (f"; the pre-registered second model, Gemma 4 31B, made none of these errors, reaching "
+           f"{N.f(G + '/arms/dependency@2000/auroc')} versus {N.f(G + '/arms/lexical@2000/auroc')} "
+           f"({sg(N.get(G + '/contrasts/dependency-lexical@2000/diff'))} "
+           f"{ci(N, G + '/contrasts/dependency-lexical@2000/ci95_family_bootstrap')}). "
+           if gemma_ready(N) and role_fp(N, G) == 0 else ". ")
+        + f"Reading the whole log without a cap scored {N.f(fa + '/auroc')}. Dependency selection missed evidence "
+        "outside the target's lineage and degraded without dependency metadata. Lineage selection keeps the "
+        "decisive evidence cheaply; whether the monitor then uses it depended on the model."
     )
     return {"title": TITLE, "authors": authors(), "abstract": abstract}
 
@@ -97,7 +110,7 @@ def body(N):
             "rule monitor on the same selected evidence, "
             "which separates retrieval from judgment.",
             "**A measured failure boundary:** dependency selection keeps nearly all decisive evidence at a small cap, "
-            "but the LLM converts it unevenly; it misses evidence outside the target's lineage by construction and "
+            "but how well an LLM uses it depended on the model; it misses evidence outside the target's lineage by construction and "
             "degrades when dependency metadata is missing.",
         ], {"numbered": True}),
         ("h2", "2. Related Work"),
@@ -147,8 +160,8 @@ def body(N):
               "requires, per base case: opposite labels; identical twin structure; agreement between the oracle and "
               "a deterministic rule monitor reading the full ledger; a second legitimate completion that changes a "
               "*different* worker, so every single-worker view of the violation is shared by a legitimate trajectory; "
-              "and a 1-minimal gold evidence set spanning at least two workers. "
-              f"{N.i('dataset/gate_passed')} of {N.i('dataset/n_base_cases')} base cases pass. The family split was "
+              "and a 1-minimal gold evidence set spanning at least two workers (the last two are waived for the "
+              f"single-worker controls). {N.i('dataset/gate_passed')} of {N.i('dataset/n_base_cases')} base cases pass. The family split was "
               "fixed before any model call: development A1, A3, B1, B3, C1, C3 (prompt design A1/B1/C1, threshold "
               "calibration A3/B3/C3); held out A2, A4, B2, B4, C2, C4."),
         ("h3", "3.2 Evidence selection under a cap"),
@@ -157,14 +170,16 @@ def body(N):
               "**Chronological** keeps the newest events. **Lexical** ranks by 4\u00d7[contains target ID] plus the "
               "number of distinct query tokens shared with the policy and request. **BM25** [11] and **Lexical+PRF** "
               "(one round of pseudo-relevance feedback adding all tokens, including artifact IDs, of the top three "
-              "events [12]) are stronger non-graph baselines added on development data before the freeze. "
+              "events [12]) are further non-graph baselines added on development data before the freeze. "
               "**Dependency** runs a backward breadth-first traversal from the target over producer-to-consumer "
-              "relations; output-less events that reference a reached artifact (licenses, revocations, reversals, "
-              "exceptions) attach at its distance; ties go to recency; spare budget stays unused. **Shuffled graph** "
-              "traverses a node-relabelled copy of the graph, selecting as many events without real structure. "
+              "relations; output-less events that reference a reached artifact (grants, revocations, reversals, "
+              "approvals, exceptions) attach at its distance; ties go to recency; spare budget stays unused. "
+              "**Shuffled graph** keeps the target's producer but traverses a node-relabelled copy of the rest of "
+              "the graph, selecting as many events without real structure. "
               "**Isolated** makes one call per worker with a third of the cap each and takes the maximum score; at "
               "2,000 tokens its repeated overhead alone exceeds that share under the conservative estimate, so it shows "
-              "no events (we kept this frozen accounting). **Full log** (no cap) is a diagnostic ceiling. Caps are 2,000 and 6,000 tokens, "
+              "no events (we kept this frozen accounting). **Full log** (no cap) is a diagnostic reference with every event "
+              "visible. Caps are 2,000 and 6,000 tokens, "
               "estimated at 2.5 bytes per token after a development pilot at 3.0 overran by up to 11%."),
         ("fig", "figures/fig1_example.png", 5.4,
          "**Figure 1.** A development violating trajectory (family A1, synthetic data). Each dot is a recorded "
@@ -218,15 +233,17 @@ def body(N):
     b += [
         ("h2", "4. Results"),
         ("h3", "4.1 Primary comparison"),
-        ("p", f"At the 2,000-token cap, dependency selection kept {N.pct(dep2 + '/gold_recall')} of gold evidence "
+        ("p", "In Sections 4.1 to 4.3 \"the LLM\" is the primary monitor, qwen3.5-397b. "
+              f"At the 2,000-token cap, dependency selection kept {N.pct(dep2 + '/gold_recall')} of gold evidence "
               f"using {N.get(dep2 + '/mean_input_tokens'):.0f} billed input tokens on average, against "
               f"{N.pct(lex2 + '/gold_recall')} for lexical retrieval at {N.get(lex2 + '/mean_input_tokens'):.0f} "
               f"tokens (Table 1). Held-out AUROC was {N.f(dep2 + '/auroc')} with dependency selection and "
-              f"{N.f(lex2 + '/auroc')} with lexical retrieval, a paired difference of {sg(N.get(dl + '/diff'))} "
+              f"{N.f(lex2 + '/auroc')} with lexical retrieval (Figure 3 in Appendix D), a paired difference of {sg(N.get(dl + '/diff'))} "
               f"(family-bootstrap 95% interval {ci(N, dl + '/ci95_family_bootstrap')}); "
               f"{N.i(dl + '/families_positive')} of 6 held-out families favored dependency and "
-              f"{N.i(dl + '/families_negative')} favored lexical (Figure 2). **The pre-registered primary contrast is positive "
-              "in point estimate but not resolved at the family level.** With lexical evidence the model abstained on {N.i(lex2 + '/abstain_valid')} of 60 "
+              f"{N.i(dl + '/families_negative')} favored lexical. **The pre-registered primary contrast is positive "
+              "in point estimate but not resolved at the family level.** "
+              f"With lexical evidence the model abstained on {N.i(lex2 + '/abstain_valid')} of 60 "
               "trajectories, reporting that the lineage was not visible. With dependency evidence it gave violation "
               f"verdicts on {N.i(dep2 + '/verdict_violation_tp')} of 30 violations but also on "
               f"{N.i(dep2 + '/verdict_violation_fp')} of 30 legitimate twins. " + frozen_threshold_sentence(N, dep2, lex2)
@@ -250,7 +267,8 @@ def body(N):
               f"{sg(N.get(Q + '/contrasts/dependency-full@nocap/diff'))} "
               f"{ci(N, Q + '/contrasts/dependency-full@nocap/ci95_family_bootstrap')}: selection fit the budget and, "
               "in point estimate, removed distracting look-alike evidence"
-              + (" (the interval narrowly includes zero)." if N.get(Q + '/contrasts/dependency-full@nocap/ci95_family_bootstrap/0') <= 0
+              + (f" (the interval narrowly includes zero; {N.i(Q + '/contrasts/dependency-full@nocap/families_positive')} "
+                 f"of 6 families favored dependency)." if N.get(Q + '/contrasts/dependency-full@nocap/ci95_family_bootstrap/0') <= 0
                  else ".")),
         ("table",
          ["Method", "AUROC 2k (CI)", "TP/FP", "Abst.", "Recall", "Tokens", "Rule",
@@ -261,11 +279,6 @@ def body(N):
          "insufficient-evidence verdicts. Recall: gold evidence shown. Tokens: mean billed input. Rule: rule-monitor "
          "AUROC on the same evidence (1.00 on the full log by the validity gate).",
          {"size": 7, "col_widths": [0.92, 0.98, 0.48, 0.44, 0.47, 0.5, 0.4, 0.98, 0.48, 0.47, 0.4]}),
-        ("fig", "figures/fig2_auroc_by_method.png", 5.5,
-         "**Figure 2.** Held-out AUROC by selection method at two input caps (LLM monitor qwen3.5-397b; error bars: "
-         "95% family-bootstrap intervals over 6 held-out families; dashed line: chance; grey line: full log with "
-         "no cap). Isolated review spends its budget on three copies of the prompt overhead and sees no events at "
-         "2,000 tokens, so its AUROC there is exactly 0.5."),
     ]
     # per-family table
     fams = [("A2", "revocation"), ("A4", "join reference vs primary"), ("B2", "dedup reference vs primary"),
@@ -280,22 +293,24 @@ def body(N):
                          N.f(f"offline_test_per_family/dependency@2000@full|{f}/gold_recall"),
                          f"{legit_flag}/5", f"{viol_miss}/5", N.f(f"{Q}/per_family/lexical@2000/{f}")])
     oo = f"{Q}/out_of_lineage"
-    role_fp = sum(N.get(f"{Q}/verdicts_by_family/dependency@2000/{f}").get("legit->violation", 0) for f in ("A4", "B2"))
+    q_role_fp = role_fp(N, Q)
     b += [
         ("h3", "4.2 Same evidence, different judgments"),
         ("p", "The rule monitor scored "
               f"{N.f('offline_test/dependency@2000@full/rule_auroc')} on the dependency selections that gave the LLM "
-              f"{N.f(dep2 + '/auroc')}, with {N.i('offline_test/dependency@2000@full/rule_fp')} false positives "
-              f"(Table 2). {role_fp} of the LLM's {N.i(dep2 + '/verdict_violation_fp')} false alarms fall in two "
+              f"{N.f(dep2 + '/auroc')}, with {N.i('offline_test/dependency@2000@full/rule_fp')} false positives; per-family "
+              f"results are in Table 2. {q_role_fp} of the LLM's {N.i(dep2 + '/verdict_violation_fp')} false alarms fall in two "
               "families whose legitimate twins hinge on a policy clause about roles: a lookup join's or a "
               "deduplication filter's *reference* input does not carry records (A4, B2). The model's stated reasons "
               "cite the restricted or held-out source as reaching the target, which the policy rules out: retrieval "
-              "succeeded and judgment failed. Families decided by plain lineage (A2, C2) were perfect for both monitors."),
+              "succeeded and judgment failed. Families decided by plain lineage (A2, C2) were perfect for both monitors."
+              + (f" The second model, judging the same selections, flagged {role_fp(N, G)} of these 10 legitimate "
+                 "twins (Section 4.4)." if gemma_ready(N) else "")),
         ("table", ["Family", "Mechanism", "Dep. LLM AUROC", "Dep. rule AUROC", "Dep. recall",
                    "Legit flagged", "Viol. missed", "Lex. LLM AUROC"], fam_rows,
          "**Table 2.** Per-family held-out results at 2,000 tokens (5 pairs each). Legit flagged / Viol. missed: "
-         "legitimate twins given a violation verdict / violations judged benign or abstained, by the LLM with "
-         "dependency evidence. Rule AUROC and recall are model-independent.",
+         "legitimate twins given a violation verdict / violations judged benign or abstained, by the LLM "
+         "(qwen3.5-397b) with dependency evidence. Rule AUROC and recall are model-independent.",
          {"size": 7, "col_widths": [0.52, 1.5, 0.68, 0.68, 0.6, 0.65, 0.65, 0.68]}),
         ("p", "**Out-of-lineage boundary (pre-registered H2).** In C4 the decisive evidence, an earlier released "
               "batch that paid part of the same invoice, is not an ancestor of the target, and dependency selection "
@@ -304,7 +319,8 @@ def body(N):
               f"{N.f(oo + '/dependency|C4_out_of_lineage/auroc')}), and so did the optimistic rule monitor. On the five "
               "in-lineage held-out families, the LLM with dependency evidence reached AUROC "
               f"{N.f(oo + '/dependency|other_test_families/auroc')}. Backward lineage misses constraints that "
-              "aggregate over sibling consumers, such as invoice totals, budgets and rate limits."),
+              "aggregate over sibling consumers, such as invoice totals (tested here) and, by the same logic, budgets or "
+              "rate limits (not tested)."),
     ]
     dl6 = f"{Q}/contrasts/dependency-lexical@6000"
     v = f"{Q}/visibility"
@@ -312,8 +328,8 @@ def body(N):
         ("h3", "4.3 Larger budgets and missing metadata"),
         ("p", budget_paragraph(N)),
         ("p", masking_paragraph(N)),
-        ("fig", "figures/fig3_budget_and_metadata.png", 5.9,
-         "**Figure 3.** (a) Model-independent share of gold minimal evidence that each selector keeps on the 60 "
+        ("fig", "figures/fig3_budget_and_metadata.png", 5.6,
+         "**Figure 2.** (a) Model-independent share of gold minimal evidence that five of the selectors keep on the 60 "
          "held-out trajectories as the input cap grows. (b, c) LLM AUROC for dependency and lexical selection when "
          "dependency relations are masked at random (25%, 50%) or at every cross-worker bridge, at the 2,000- and "
          "6,000-token caps."),
@@ -324,25 +340,28 @@ def body(N):
     b += [
         ("h3", "4.4 Second model, controls and cost"),
         ("p", second_model_sentence(N) +
-              "On the 9 single-worker control pairs, dependency, lexical and full-log review gave AUROC "
-              f"{N.f(Q + '/controls/dependency/auroc')}, {N.f(Q + '/controls/lexical/auroc')} and "
-              f"{N.f(Q + '/controls/full/auroc')}; isolated review shows no events at this cap "
-              f"({N.f(Q + '/controls/isolated/auroc')}), so the controls do not test it. All model calls, including pilots and the second model, cost "
-              f"{N.f('costs/total_credits', 2)} Adaption credits over {N.i('costs/n_calls_total')} recorded calls. "
-              "Cost was never the binding constraint; the per-user rate limit was. " + exploratory_pointer(N)),
+              "On the 9 single-worker control pairs, dependency, lexical, chronological and full-log review gave "
+              f"AUROC {N.f(Q + '/controls/dependency/auroc')}, {N.f(Q + '/controls/lexical/auroc')}, "
+              f"{N.f(Q + '/controls/chronological/auroc')} and {N.f(Q + '/controls/full/auroc')}; isolated review shows no events at this cap "
+              f"({N.f(Q + '/controls/isolated/auroc')}), so the controls do not test it. All {N.i('costs/n_calls_total')} "
+              f"recorded model calls, including pilots, cost {N.f('costs/total_credits', 2)} Adaption credits. "
+              + exploratory_pointer(N)),
     ]
     # ---------------- Discussion
     b += [
         ("h2", "5. Discussion and Limitations"),
         ("p", "**What the results mean.** Under a tight budget, following recorded lineage is a cheap retrieval "
               "step: it keeps almost all decisive evidence at a fraction of a full review's tokens, which non-graph "
-              "retrieval cannot do at small caps because the relevant events look like routine work. Better context "
-              "did not yield proportionally better detection: on the same evidence a short deterministic checker "
-              "made no false alarms, while the LLM monitor flagged every legitimate twin in the two role-dependent "
-              "families. Where the policy is explicit, a deterministic check over the selected lineage can decide, "
+              "retrieval cannot do at small caps. For the primary monitor, better context did not yield proportionally "
+              "better detection: on the same evidence a short deterministic checker made no false alarms, while Qwen "
+              "flagged every legitimate twin in the two role-dependent families. "
+              + ("The second model made none of these errors, so the judgment gap is model-specific: lineage "
+                 "selection supplies the right evidence, and the judge decides whether it is used. "
+                 if gemma_ready(N) and role_fp(N, G) == 0 else "")
+              + "Where the policy is explicit, a deterministic check over the selected lineage can decide, "
               "with an LLM reserved for semantics the schema cannot express. Lineage selection also has predictable "
               "blind spots (aggregate constraints over sibling consumers, missing metadata), so a deployed monitor "
-              "needs a fallback such as lexical retrieval or sibling expansion."),
+              "needs a fallback for those cases, such as sibling expansion; lexical retrieval did not rescue C4."),
         ("p", hypotheses_paragraph(N)),
         ("p", "**Limitations.** The setting is synthetic and scripted (three known workers, a trusted complete "
               "recorder, a common finalization point), so results do not transfer to unknown swarms, tampered logs or "
@@ -357,15 +376,16 @@ def body(N):
         ("h2", "6. Conclusion"),
         ("p", "At a fixed context budget, selecting evidence through recorded artifact dependencies retained "
               f"{N.pct(dep2 + '/gold_recall')} of decisive cross-agent evidence where lexical retrieval retained "
-              f"{N.pct(lex2 + '/gold_recall')}. The LLM monitor's held-out AUROC was {N.f(dep2 + '/auroc')} with "
+              f"{N.pct(lex2 + '/gold_recall')}. The primary monitor's held-out AUROC was {N.f(dep2 + '/auroc')} with "
               f"dependency evidence versus {N.f(lex2 + '/auroc')} with lexical evidence, a difference whose "
-              "family-level interval includes zero. The limiting factor "
-              "was judgment: a deterministic checker on the same evidence reached "
-              f"{N.f('offline_test/dependency@2000@full/rule_auroc')}. Lineage selection fails predictably on "
+              "family-level interval includes zero; its errors were misapplied role rules on evidence that a "
+              f"deterministic checker scored at {N.f('offline_test/dependency@2000@full/rule_auroc')}"
+              + (f" and the second model at {N.f(G + '/arms/dependency@2000/auroc')}" if gemma_ready(N) else "")
+              + ". Lineage selection fails predictably on "
               "out-of-lineage constraints and missing metadata. We release the benchmark, protocol and every run "
               "record."),
         ("h2", "Code and Data"),
-        ("p", f"{REPO} (MIT) holds the synthetic data, labels, frozen protocol and every model call with billed "
+        ("p", f"Repository: {REPO} (MIT). It holds the synthetic data, labels, frozen protocol and every model call with billed "
               "tokens and cost; `python -m swarm_evidence analyze` regenerates all tables and figures. No real or "
               "personal data."),
         ("h2", "Author Contributions"),
@@ -416,13 +436,31 @@ def moved(a, b, nd=2):
     return f"{'fell' if b < a else 'rose'} from {fa} to {fb}"
 
 
+NON_GRAPH = ("lexical", "chronological", "bm25", "lexical_prf")
+
+
+def join(items):
+    items = list(items)
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def h3_split(N):
+    """Per non-graph baseline: dependency-minus-baseline AUROC difference at 2k and 6k (pre-registered H3)."""
+    out = {}
+    for b in NON_GRAPH:
+        k2, k6 = f"{Q}/contrasts/dependency-{b}@2000/diff", f"{Q}/contrasts/dependency-{b}@6000/diff"
+        if N.has(k2) and N.has(k6):
+            out[b] = (N.get(k2), N.get(k6))
+    return out
+
+
 def budget_paragraph(N):
     o = "offline_test"
     d2r, d6r = N.get(f"{o}/dependency@2000@full/gold_recall"), N.get(f"{o}/dependency@6000@full/gold_recall")
     txt = (f"At the 6,000-token cap the non-graph baselines keep more evidence (lexical recall "
            f"{N.f(o + '/lexical@6000@full/gold_recall')}), while dependency selection's recall "
            + ("is unchanged because it never pads" if f"{d2r:.2f}" == f"{d6r:.2f}" else moved(d2r, d6r))
-           + " (Figure 3a). ")
+           + " (Figure 2a). ")
     dl2, dl6 = f"{Q}/contrasts/dependency-lexical@2000", f"{Q}/contrasts/dependency-lexical@6000"
     if not (stage_done(N, Q, "stage3") and N.has(dl6 + "/diff")):
         return txt + "The 6,000-token LLM stage had not finished when this version was built, so H3 is not tested."
@@ -432,8 +470,16 @@ def budget_paragraph(N):
             f"{moved(N.get(l2 + '/auroc'), N.get(l6 + '/auroc'))}, as abstentions ({N.i(l2 + '/abstain_valid')} to "
             f"{N.i(l6 + '/abstain_valid')}) gave way to false alarms on {N.i(l6 + '/verdict_violation_fp')} of 30 "
             f"legitimate twins (Table 1). The dependency-minus-lexical difference was {sg(d6)} "
-            f"{ci(N, dl6 + '/ci95_family_bootstrap')} at 6,000 tokens against {sg(d2)} at 2,000, so the shrinkage "
-            "predicted by pre-registered H3 " + ("appeared in point estimate. " if d6 < d2 else "did not occur. "))
+            f"{ci(N, dl6 + '/ci95_family_bootstrap')} at 6,000 tokens against {sg(d2)} at 2,000. ")
+    sp = h3_split(N)
+    shrank = [b for b, (a2, a6) in sp.items() if a6 < a2]
+    grew = [b for b in sp if b not in shrank]
+    if sp:
+        txt += ("Pre-registered H3 predicted that the advantage over non-graph retrieval would shrink; it "
+                + (f"grew against {join(LABEL[b] for b in grew)}" if grew else "")
+                + ("; it " if grew and shrank else "")
+                + (f"shrank against {join(LABEL[b] + f' ({sg(sp[b][0])} to {sg(sp[b][1])})' for b in shrank)}"
+                   if shrank else "") + ". ")
     rp = f"dependency_cap_repeat/{Q.split('/', 1)[1]}"
     if N.has(rp + "/n_identical_input") and N.get(rp + "/n_identical_input") == N.get(rp + "/n_cases"):
         txt += (f"Dependency selection sent identical prompts at both caps, so its two runs are a natural repeat: "
@@ -444,7 +490,7 @@ def budget_paragraph(N):
     n_over = sum(over.values())
     if n_over:
         mx = max(N.get(f"{Q}/arms/{a}@6000/max_input_tokens") for a in BUDGETED if over[a])
-        txt += f"At this cap, {n_over} non-graph calls billed up to {mx:,} input tokens"
+        txt += f"At this cap, {n_over} non-graph calls billed more input than the cap (at most {mx:,} tokens)"
     if sum(inv.values()):
         parts = [f"{v} {LABEL[a]}" for a, v in inv.items() if v]
         txt += ((", and " if n_over else "At this cap, ") + f"{sum(inv.values())} outputs were invalid ("
@@ -462,18 +508,20 @@ def masking_paragraph(N):
     txt = ("Masking dependency metadata hurts dependency selection's retrieval: at 2,000 tokens its gold-evidence "
            f"recall {moved(rec['full'], rec['random25'])} with 25% of relations masked, to {rec['random50']:.2f} at "
            f"50%, and to {rec['bridges']:.2f} when every cross-worker bridge (about half of all relations) is masked, "
-           "while lexical recall " + ("is essentially unchanged" if lex_same else "changes little") + ". ")
+           "while lexical recall " + ("is essentially unchanged" if lex_same else "changes little")
+           + f"; at 6,000 tokens with 50% masking, lexical retrieval kept more of it ("
+           f"{N.get('offline_test/lexical@6000@random50/gold_recall'):.2f} vs "
+           f"{N.get('offline_test/dependency@6000@random50/gold_recall'):.2f}). ")
     if not stage_done(N, Q, "stage4"):
         return txt + "The LLM masking stage had not finished when this version was built, so masked AUROCs are not reported."
     a = {m: N.get(f"{v}/dependency@2000@{m}/auroc") for m in ("full", "random25", "random50", "bridges")}
     al = {m: N.get(f"{v}/lexical@2000@{m}/auroc") for m in ("full", "random50")}
     txt += (f"The LLM's AUROC with dependency evidence {moved(a['full'], a['random25'])} at 25% masking and was "
             f"{a['random50']:.2f} at 50% and {a['bridges']:.2f} with bridges masked; with lexical evidence it "
-            f"{moved(al['full'], al['random50'])} at 50% (Figure 3b, c). ")
-    l6, d6 = N.get(f"{o}/lexical@6000@random50/gold_recall"), N.get(f"{o}/dependency@6000@random50/gold_recall")
-    txt += (f"At 6,000 tokens with 50% masking, lexical retrieval kept {'more' if l6 > d6 else 'less'} decisive "
-            f"evidence ({l6:.2f}) than dependency selection ({d6:.2f}). The conditions are not equally severe, and the "
-            "masked placeholders tell the monitor that a link is missing.")
+            f"{moved(al['full'], al['random50'])} at 50% (Figure 2b, c). With half the relations masked the model "
+            f"mostly abstained ({N.i(v + '/dependency@2000@random50/abstain_valid')} of 60 dependency-arm trajectories) "
+            f"and raised {N.i(v + '/dependency@2000@random50/verdict_violation_fp')} false alarms. ")
+    txt += "Masked placeholders tell the monitor that a link is missing."
     return txt
 
 
@@ -546,23 +594,34 @@ def live_paragraph(N, L):
     return txt + "The violation was instructed, not emergent, and one domain and one model limit what this shows."
 
 
+def gemma_ready(N):
+    return stage_done(N, G, "stage1") and N.has(f"{G}/contrasts/dependency-lexical@2000/diff")
+
+
+def role_fp(N, M):
+    """Legitimate twins in the role-rule families (A4, B2) given a violation verdict with dependency evidence."""
+    return sum(N.get(f"{M}/verdicts_by_family/dependency@2000/{f}").get("legit->violation", 0) for f in ("A4", "B2"))
+
+
 def second_model_sentence(N):
     """Second pre-registered model family: report what happened, in the direction it happened."""
     g_dep, g_lex = f"{G}/arms/dependency@2000", f"{G}/arms/lexical@2000"
     gdl = f"{G}/contrasts/dependency-lexical@2000"
     if not (stage_done(N, G, "stage1") and N.has(gdl + "/diff")):
         return "The second model (gemma-4-31b-it) had not finished its held-out stages when this version was built, so no result is reported. "
-    d, q = N.get(gdl + "/diff"), N.get(f"{Q}/contrasts/dependency-lexical@2000/diff")
-    direction = "the same direction as" if (d > 0) == (q > 0) else "the opposite direction to"
+    d = N.get(gdl + "/diff")
+    goo = f"{G}/out_of_lineage/dependency|C4_out_of_lineage"
+    out = (f"The pre-registered second model, gemma-4-31b-it, judged the same selections differently: dependency "
+           f"AUROC {N.f(g_dep + '/auroc')} versus lexical {N.f(g_lex + '/auroc')} at 2,000 tokens (difference "
+           f"{sg(d)}, interval {ci(N, gdl + '/ci95_family_bootstrap')}; {N.i(gdl + '/families_positive')} of 6 "
+           f"families favored dependency), with {N.i(g_dep + '/verdict_violation_tp')} true and "
+           f"{N.i(g_dep + '/verdict_violation_fp')} false violation verdicts. It flagged {role_fp(N, G)} of the 10 "
+           f"role-rule legitimate twins and, like Qwen, {N.i(goo + '/violations_flagged')} of the "
+           f"{N.i(goo + '/violations_total')} C4 violations. ")
     n_inv = N.get(g_dep + "/invalid") + N.get(g_lex + "/invalid")
-    out = (f"With gemma-4-31b-it, dependency AUROC was {N.f(g_dep + '/auroc')} versus lexical "
-           f"{N.f(g_lex + '/auroc')} at 2,000 tokens (difference {sg(d)}, interval "
-           f"{ci(N, gdl + '/ci95_family_bootstrap')}), {direction} the primary model; the dependency arm gave "
-           f"{N.i(g_dep + '/verdict_violation_tp')} true and {N.i(g_dep + '/verdict_violation_fp')} false violation "
-           "verdicts. ")
     if n_inv:
-        out += (f"{N.i(g_dep + '/invalid')} dependency-arm and {N.i(g_lex + '/invalid')} lexical-arm outputs were "
-                "invalid and scored 0.5 under the frozen policy. ")
+        out += (f"Invalid outputs, scored 0.5 under the frozen policy: {N.i(g_dep + '/invalid')} in the dependency arm "
+                f"and {N.i(g_lex + '/invalid')} in the lexical arm. ")
     return out
 
 
@@ -580,7 +639,7 @@ def frozen_threshold_sentence(N, dep2, lex2):
         out = (f"At the threshold frozen on calibration families ({N.f(dep2 + '/threshold_frozen')}) it flagged "
                f"{N.i(dep2 + '/tpr_frozen/k')}/30 violations and {N.i(dep2 + '/fpr_frozen/k')}/30 legitimate runs "
                f"(false-positive rate 95% Wilson interval {w})")
-    if N.has(lex2 + "/threshold_frozen"):
+    if N.has(lex2 + "/threshold_frozen") and (N.get(lex2 + "/tpr_frozen/k") or N.get(lex2 + "/fpr_frozen/k")):
         out += (f"; the lexical arm flagged {N.i(lex2 + '/tpr_frozen/k')}/30 and {N.i(lex2 + '/fpr_frozen/k')}/30 "
                 "at its frozen threshold")
     return out + "."
@@ -593,7 +652,10 @@ def hypotheses_paragraph(N):
     oo = f"{Q}/out_of_lineage/dependency|C4_out_of_lineage"
     lo = N.get(dl2 + "/ci95_family_bootstrap/0")
     h1 = ("H1 (dependency > lexical at 2k): positive point estimate, "
-          + ("not resolved at the family level" if lo <= 0 else "interval excludes zero") + ".")
+          + ("not resolved at the family level" if lo <= 0 else "interval excludes zero")
+          + (f" for the primary model; with the second model the interval "
+             f"{'excludes' if N.get(G + '/contrasts/dependency-lexical@2000/ci95_family_bootstrap/0') > 0 else 'includes'} "
+             "zero." if gemma_ready(N) else "."))
     flagged, total = N.get(oo + "/violations_flagged"), N.get(oo + "/violations_total")
     h2 = (f"H2 (out-of-lineage misses): {'confirmed' if flagged == 0 else 'partly confirmed'} in C4 "
           f"({flagged} of {total} violations flagged).")
@@ -602,8 +664,12 @@ def hypotheses_paragraph(N):
         lo2, hi2 = N.get(dl2 + "/ci95_family_bootstrap/0"), N.get(dl2 + "/ci95_family_bootstrap/1")
         lo6, hi6 = N.get(dl6 + "/ci95_family_bootstrap/0"), N.get(dl6 + "/ci95_family_bootstrap/1")
         overlap = lo6 <= hi2 and lo2 <= hi6
-        h3 = ("H3 (advantage shrinks at 6k): " + (("shrank in point estimate" + (
-              ", with overlapping intervals." if overlap else ".")) if d6 < d2 else "not observed."))
+        sp = h3_split(N)
+        shrank = [b for b, (a2, a6) in sp.items() if a6 < a2]
+        h3 = ("H3 (advantage shrinks at 6k): " + ("supported in point estimate." if len(shrank) == len(sp) else
+              "not supported." if not shrank else
+              f"shrank against {len(shrank)} of {len(sp)} non-graph baselines "
+              f"({join(LABEL[b] for b in shrank)}) and grew against the rest."))
     else:
         h3 = "H3 (advantage shrinks at 6k): not tested; the 6,000-token stage had not finished."
     v = f"{Q}/visibility"
@@ -617,11 +683,13 @@ def hypotheses_paragraph(N):
         h4 = ("H4 (masking hurts dependency more): supported for model-independent evidence recall; "
               "the LLM masking stage had not finished.")
     fams = ("A2", "A4", "B2", "B4", "C2")
+    models = [Q] + ([G] if gemma_ready(N) else [])
     ok = [N.get(f"offline_test_per_family/dependency@2000@full|{f}/rule_auroc")
-          >= N.get(f"{Q}/per_family/dependency@2000/{f}") for f in fams]
+          >= N.get(f"{M}/per_family/dependency@2000/{f}") for M in models for f in fams]
+    scope = "both models" if len(models) == 2 else "the primary model"
     h5 = ("H5 (rule monitor ≥ LLM on complete lineage): "
-          + ("supported on all five in-lineage families." if all(ok) else
-             f"supported on {sum(ok)} of the five in-lineage families."))
+          + (f"supported on all five in-lineage families for {scope}." if all(ok) else
+             f"supported in {sum(ok)} of {len(ok)} family-model cases."))
     return "**Pre-registered hypotheses.** " + " ".join([h1, h2, h3, h4, h5])
 
 
@@ -640,7 +708,8 @@ def live_limitation(N):
     if N.has("live_exploratory/request/completed"):
         return ("All pre-registered trajectories are replayed scripts. The only model-driven workers are in a small "
                 "exploratory live slice (one domain, one instructed violation; Appendix C).")
-    return "The live-agent validation slice was not run: all trajectories are replayed scripts."
+    return ("All reported trajectories are replayed scripts; the exploratory live-agent slice had not finished "
+            "when this version was built (only smoke-test worker calls, counted in the cost totals, exist).")
 
 
 def author_contributions():
@@ -698,12 +767,14 @@ def appendix(N):
               "calls): four outputs truncated at 384 tokens by long arithmetic, and the 3.0 bytes/token estimator "
               "overran the 2,000 cap on 16 calls by up to 11%. Pilot v2: a one-sentence reason and 2.5 bytes/token; "
               "no overruns, but on two legitimate payment cases the model wrote the verdict before the reason and "
-              "contradicted its own arithmetic. Pilot v3: reason first (36 calls). Lexical retrieval was weaker "
+              "contradicted its own arithmetic. Pilot v3: reason first (36 calls); the same pilot with gemma-4-31b-it "
+              "(36 calls) gave 2 invalid outputs, both repetition loops. Lexical retrieval was weaker "
               "than chronological review on development recall, so BM25 and Lexical+PRF were added before the "
               "freeze; lexical stayed the pre-registered primary comparator. Traces were lengthened before the "
               "freeze so that both caps bind on every trace. After the freeze we found that the provider's rate "
               "limit is shared across models, so we stopped a concurrent second-model chain after 3 calls "
-              "(reserving their possible cost) and ran the models sequentially. Later code fixes and exploratory additions "
+              "(recording a reservation for any in-flight calls that may have been billed without a saved response) and "
+              "ran the models sequentially. Later code fixes and exploratory additions "
               "are listed in protocol/POST_FREEZE_CHANGES.md; none changes a pre-registered stage. The aggregation code "
               "(swarm_evidence/analysis.py) was first committed after the stage-1 calls were recorded; it implements "
               "the metric functions (frozen metrics module), invalid-output policy, threshold rule and primary "
@@ -711,10 +782,12 @@ def appendix(N):
               + second_model_coverage(N)),
         ("p", f"**Cost and calls.** Total {N.f('costs/total_credits', 3)} credits over "
               f"{N.i('costs/n_calls_total')} recorded calls, including pilots, the second model and transport-error "
-              "reservations. The runner enforces a cumulative 800-credit ceiling with per-stage caps, reserves "
+              "reservations. Cost was never the binding constraint; the provider's per-user rate limit was. The runner "
+              "enforces a cumulative 800-credit ceiling with per-stage caps, reserves "
               "each call's worst-case cost before sending it, and checkpoints every response; per-stage counts and "
               "costs are in results/analysis/summary.json."),
         *appendix_c(N),
+        *appendix_d(N),
         ("h2", "LLM Usage Statement"),
         ("p", llm_statement()),
     ]
@@ -724,6 +797,20 @@ def appendix(N):
 def llm_statement():
     p = ROOT / "report/llm_statement.txt"
     return p.read_text().strip() if p.exists() else "[LLM USAGE STATEMENT TO CONFIRM]"
+
+
+def appendix_d(N):
+    out = [("h2", "Appendix D. Additional figures"),
+           ("fig", "figures/fig2_auroc_by_method.png", 6.0,
+            "**Figure 3.** Held-out AUROC by selection method at two input caps (primary monitor qwen3.5-397b; error "
+            "bars: 95% family-bootstrap intervals over 6 held-out families; dashed line: chance; grey line: full log "
+            "with no cap). Isolated review spends its budget on three copies of the prompt overhead and sees no "
+            "events at 2,000 tokens, so its AUROC there is exactly 0.5. The same numbers are in Table 1.")]
+    if gemma_ready(N) and (ROOT / "figures/figS1_auroc_by_method_secondary.png").exists():
+        out.append(("fig", "figures/figS1_auroc_by_method_secondary.png", 6.0,
+                    "**Figure 4.** The same for the pre-registered second model, gemma-4-31b-it. Only methods scored "
+                    "on all 60 held-out trajectories are shown; invalid outputs score 0.5."))
+    return out
 
 
 def appendix_c(N):
@@ -753,7 +840,8 @@ def appendix_c(N):
     else:
         out.append(("p", "**Temperature-0 repeat.** Planned, but not finished when this version was built; no result is reported."))
     if not N.has(L + "/request/completed"):
-        out.append(("p", "**Live-agent slice.** Planned, but not finished when this version was built; no result is reported."))
+        out.append(("p", "**Live-agent slice.** Started (a smoke test of the model-driven workers is in the call record "
+                         "and cost totals) but not finished when this version was built; no result is reported."))
         return out
     out.append(("p", live_paragraph(N, L)))
     return out
