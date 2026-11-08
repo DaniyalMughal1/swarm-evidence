@@ -150,9 +150,24 @@ def audit_report(root: Path) -> dict:
             flat[prefix] = obj
 
     walk("", summary)
+
+    def resolve(path):
+        cur = summary
+        for part in path.split("/"):
+            cur = cur[int(part)] if isinstance(cur, list) else cur[part]
+        return cur
+
     bad = []
     for key, val in used.items():
-        if key not in flat:
+        if isinstance(val, (dict, list)):  # a sub-table read as a whole (e.g. verdict counts by family)
+            try:
+                ref = resolve(key)
+            except (KeyError, IndexError, TypeError, ValueError):
+                bad.append(f"{key}: not in summary")
+                continue
+            if ref != val:
+                bad.append(f"{key}: report {val} vs summary {ref}")
+        elif key not in flat:
             bad.append(f"{key}: not in summary")
         elif isinstance(val, float) and isinstance(flat[key], (int, float)):
             if abs(round(flat[key], 3) - val) > 1e-3:
