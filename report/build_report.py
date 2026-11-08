@@ -52,6 +52,16 @@ class Numbers:
         self.used[path] = round(cur, 3) if isinstance(cur, float) else cur
         return cur
 
+    def has(self, path):
+        """True if the path resolves to a value (used to drop sentences about stages that did not finish)."""
+        cur = self.s
+        try:
+            for part in path.split("/"):
+                cur = cur[int(part)] if isinstance(cur, list) else cur[part]
+        except (KeyError, IndexError, TypeError, ValueError):
+            return False
+        return not (isinstance(cur, dict) and cur.get("incomplete"))
+
     def f(self, path, nd=2):
         v = self.get(path)
         return "n/a" if v is None else f"{v:.{nd}f}"
@@ -240,11 +250,18 @@ def add_table(doc, header, rows, caption, col_widths=None, size=7.5):
         for row in t.rows:
             for j, w in enumerate(col_widths):
                 row.cells[j].width = Inches(w)
-    for row in t.rows:
+    n_rows = len(t.rows)
+    for ri, row in enumerate(t.rows):
+        trPr = row._tr.get_or_add_trPr()
+        trPr.append(trPr.makeelement(qn("w:cantSplit"), {}))
         for c in row.cells:
             for p in c.paragraphs:
                 p.paragraph_format.space_after = Pt(0)
                 p.paragraph_format.space_before = Pt(0)
+                if os.environ.get("REPORT_TABLE_KEEP", "all") == "all":
+                    p.paragraph_format.keep_with_next = ri < n_rows - 1
+                else:  # keep only caption, header and first body row together; rows never split
+                    p.paragraph_format.keep_with_next = ri < 1
     spacer = doc.add_paragraph(style="normal")
     spacer.paragraph_format.space_after = Pt(2)
     return t
@@ -295,6 +312,11 @@ def main():
     fill_front_matter(doc, meta["title"], meta["authors"], meta["abstract"])
     clear_body_after_front_matter(doc)
     render(content.body(N), doc)
+    if not os.environ.get("REPORT_DRAFT"):  # a final build must not ship placeholders or missing values
+        text = " ".join(doc.element.body.itertext())  # includes nested tables (author block, abstract box)
+        bad = sorted({m for m in re.findall(r"TO CONFIRM|\[AUTHOR[^\]]*\]|\bnan\b|PENDING", text)})
+        if bad:
+            raise SystemExit(f"refusing final build, placeholders or missing values remain: {bad}")
     doc.save(str(OUT_DOCX))
     (ROOT / "report/numbers_used.json").write_text(json.dumps(N.used, indent=1, sort_keys=True) + "\n")
     words = len(re.findall(r"\S+", re.sub(r"[*`]", "", meta["abstract"])))
