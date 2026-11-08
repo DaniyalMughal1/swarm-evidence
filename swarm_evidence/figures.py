@@ -154,13 +154,13 @@ def _visibility_panel(summary, model, ax, cap, title):
                 hs.append(v["auroc"])
         ax.bar(xs, hs, width=0.36, color=COLORS[arm], label=ARM_LABEL[arm], zorder=3)
         for x, h in zip(xs, hs):
-            ax.text(x, h + 0.015, f"{h:.2f}", ha="center", va="bottom", fontsize=6, color=INK)
+            ax.text(x, h + 0.015, f"{h:.2f}", ha="center", va="bottom", fontsize=6, color=INK, rotation=90)
     ax.axhline(0.5, color=INK2, lw=0.7, ls=(0, (3, 2)))
     ax.set_xticks(range(len(conds)))
     ax.set_xticklabels(names, fontsize=6.5)
     ax.set_xlim(-0.65, 3.65)
-    ax.set_xlabel("dependency relations masked")
-    ax.set_ylim(0, 1.08)
+    ax.set_xlabel("relations masked")
+    ax.set_ylim(0, 1.12)
     ax.set_title(title, fontsize=8, color=INK, loc="left")
     _style(ax)
 
