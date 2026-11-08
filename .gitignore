@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+work/
+private/
+transcripts/
+recordings/
+*.vtt
+*.mp4
+*.m4a
+*.log
+.pytest_cache/

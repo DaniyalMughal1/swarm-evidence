@@ -1,0 +1,32 @@
+[
+  {
+    "url": "https://apartresearch.com/sprints/swarm-alignment-2026",
+    "retrieved": "2026-11-08",
+    "local_source_sha256": "d72d45bb885d6cfa83ca68ed45b74ae005d4dce638d124c399f5133a5077f63a",
+    "published_copy": false
+  },
+  {
+    "url": "https://docs.google.com/document/d/1_1_27EyZriMlc8n8EBE2YScaeyMjm-8xjR097nmHXAE/copy?usp=sharing",
+    "retrieved": "2026-11-08",
+    "local_source_sha256": "0754e266828cf0d4f5af30735682c5bad0717632538e021e4df446e96242bdef",
+    "published_copy": false
+  },
+  {
+    "url": "https://docs.google.com/document/d/1Ykhw87lfvDrV7IOq22ESEicQfvbNf3l3gXAEhnur1hk/edit?usp=sharing",
+    "retrieved": "2026-11-08",
+    "local_source_sha256": "3f420b2dfd79ba104fac49f3894f9edd77e68a89a94122cd9200ab4d26d3b85c",
+    "published_copy": false
+  },
+  {
+    "url": "https://docs.adaptionlabs.ai/inference-stacks/quickstart/",
+    "retrieved": "2026-11-08",
+    "local_source_sha256": "6a2c5f39dba2021494db6c8e0663c118d126a20602b0cb7152f5f4661646d892",
+    "published_copy": false
+  },
+  {
+    "url": "https://docs.adaptionlabs.ai/inference-stacks/models/",
+    "retrieved": "2026-11-08",
+    "local_source_sha256": "c043cc889285c04cd7c8ab1da7c090e3b132783b888038d546dd895230d720b2",
+    "published_copy": false
+  }
+]

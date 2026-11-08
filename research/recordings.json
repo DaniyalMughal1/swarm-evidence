@@ -1,0 +1,279 @@
+[
+  {
+    "id": "V01",
+    "title": "Adaption workshop",
+    "provider_title": "Workshop: Intro to Adaptive Intelligence with Adaption",
+    "scheduled_utc": "2026-11-05T13:15:00Z",
+    "url": "https://us06web.zoom.us/rec/share/MoHLrr8zPSlCkc0Gwubi2sW5-BDKK8hDrWsS9bBMf-m4Urhz1iEqXe9-kWdjdhaa.bAmJvTHee2iK4mgc",
+    "duration_seconds": 3343,
+    "transcript_retrieved": true,
+    "transcript_sha256": "29f81a9d2a7d5f8261a90c9e6cf35e6a92928df90aac2eb75971999defd65c56",
+    "transcript_bytes": 62751,
+    "review_method": "Automatic captions retrieved; research-relevant passages reviewed. No claim of full audiovisual viewing.",
+    "segments": [
+      {
+        "timestamp": "01:42; 40:28–43:38",
+        "note": "Hosted inference is available in addition to data generation and training. Current official docs independently confirm the API path."
+      },
+      {
+        "timestamp": "15:11–16:00; 47:03–49:52",
+        "note": "Small monitors trained or evaluated on synthetic traces are an application direction. Compare quality, latency and cost against the unfine-tuned base."
+      },
+      {
+        "timestamp": "12:51; 20:11–20:26; 23:22",
+        "note": "Training/data generation have queue time; dashboard credit units need checking. Demonstration timings are not guarantees."
+      }
+    ],
+    "project_implication": "Use hosted inference first. Keep dataset invention optional and never use generated prose as ground truth."
+  },
+  {
+    "id": "V02",
+    "title": "John Kitaoka — securing systems against agent swarms",
+    "provider_title": "HackTalk: John Kitaoka",
+    "scheduled_utc": "2026-11-05T15:00:00Z",
+    "url": "https://us06web.zoom.us/rec/share/OkOtOYVrZQ-AcL8KW67GljV9aSwr9_fpUkSwPnSOi9gfbSKvtgQ-Hmv-iISMs0e3.ws_5jHI_LbDWFMVV",
+    "duration_seconds": 3602,
+    "transcript_retrieved": true,
+    "transcript_sha256": "85246fac93556bb58c9d4792cb8c6d7195f16fe4e1a61f20244c188229dd9946",
+    "transcript_bytes": 67303,
+    "review_method": "Automatic captions retrieved; research-relevant passages reviewed. No claim of full audiovisual viewing.",
+    "segments": [
+      {
+        "timestamp": "12:42–15:33",
+        "note": "Define the threat model; distributed actions can require corroboration across agents."
+      },
+      {
+        "timestamp": "18:07–19:52",
+        "note": "Preliminary examples illustrate weak local detection and potential benefit of joint context. We do not reuse the spoken percentages as validated benchmark results."
+      },
+      {
+        "timestamp": "28:35–31:59",
+        "note": "Control token/attempt budgets and address how a monitor chooses which agents to aggregate."
+      },
+      {
+        "timestamp": "56:11–57:25",
+        "note": "Q&A explicitly proposes corroborating relevant actions across agents. Credit this as motivation, not our invention."
+      }
+    ],
+    "project_implication": "Most relevant talk. Compare retrieval policies at fixed context caps; explicitly cite the idea’s provenance."
+  },
+  {
+    "id": "V03",
+    "title": "Grant Fleming — adversarially optimized swarms",
+    "provider_title": "HackTalk: Grant Fleming",
+    "scheduled_utc": "2026-11-05T22:00:00Z",
+    "url": "https://us06web.zoom.us/rec/share/pcTdhZyUb5iQ61WCsTJOTpanXYni2P47SvozCVq-BKhPg6_cGO3VDkzozs4xwHah.9Jz23XWlGZa03bA9",
+    "duration_seconds": 3495,
+    "transcript_retrieved": true,
+    "transcript_sha256": "38aff978a4babfe31655b78f4fc8d93963d2ca3f3ecc8ecd4566999c77c4788d",
+    "transcript_bytes": 76830,
+    "review_method": "Automatic captions retrieved; research-relevant passages reviewed. No claim of full audiovisual viewing.",
+    "segments": [
+      {
+        "timestamp": "Talk demonstration",
+        "note": "A group of helpful-seeming personas pressures a debugging agent toward a forbidden token-handling action. The local demonstration uses adversarial social context."
+      },
+      {
+        "timestamp": "Closing Q&A, approximately 55:00",
+        "note": "A many-agent attack needs a matched single-agent turns/tokens control to identify a group effect."
+      }
+    ],
+    "project_implication": "Do not confuse additional persuasion budget with a uniquely multi-agent vulnerability. Use only synthetic local payloads."
+  },
+  {
+    "id": "V04",
+    "title": "Nguyen Tran — logistics",
+    "provider_title": "Logistics Presentation: Swarm Alignment Hackathon",
+    "scheduled_utc": "2026-11-06T13:30:00Z",
+    "url": "https://us06web.zoom.us/rec/share/rMUl0k0JCmN7Qs8cuMrXiXQjONccIgvp7SLc37UT_6BmaMvec0MGxTaaRanxJWFR.JLX29Mo6bBQqrnww",
+    "duration_seconds": 3536,
+    "transcript_retrieved": true,
+    "transcript_sha256": "2ee9d5ccfb705d3a0629460876b4ce1975f11566ec45b39d6638117f69b53dce",
+    "transcript_bytes": 67650,
+    "review_method": "Automatic captions retrieved; research-relevant passages reviewed. No claim of full audiovisual viewing.",
+    "segments": [
+      {
+        "timestamp": "Logistics presentation",
+        "note": "Covers event structure, tracks, resources, report expectations and participation questions. The current website is authoritative if wording differs."
+      },
+      {
+        "timestamp": "41:42",
+        "note": "The comment about no separate API sponsorship should be read alongside the Adaption workshop and current inference docs."
+      }
+    ],
+    "project_implication": "Use the current Guidelines template and rubric; do not assume another provider’s credits exist."
+  },
+  {
+    "id": "V05",
+    "title": "John Yan and Elvis Sikora — getting started with swarm incidents",
+    "provider_title": "Getting Started with Swarm Incidents | John Yan & Elvis Sikora",
+    "scheduled_utc": "2026-11-06T18:00:00Z",
+    "url": "https://us06web.zoom.us/rec/share/gOe4dpuABPxMRIrx-xkqSxLDDaYDQW8qeiym12IYpShp6iq1IkI7O8JwTLQNzJ71.sh2YTRNpHZWbiS_i",
+    "duration_seconds": 1703,
+    "transcript_retrieved": true,
+    "transcript_sha256": "0875db04c469b489cbb8f861be19e4ff4e5e5e80e760b9176d62d92b485d93df",
+    "transcript_bytes": 38529,
+    "review_method": "Automatic captions retrieved; research-relevant passages reviewed. No claim of full audiovisual viewing.",
+    "segments": [
+      {
+        "timestamp": "Main talk and shared slide-links document",
+        "note": "Use incident registries and public artifacts to form a causal hypothesis; reproduce manageable components when full lab access is unavailable."
+      },
+      {
+        "timestamp": "Linked playbook",
+        "note": "Separate discovering a channel, using it, spreading a behavior and successful harm. Keep near misses and bounded null results."
+      }
+    ],
+    "project_implication": "Study a small mechanism with executable outcomes. A synthetic reproduction tests a hypothesis; it does not independently confirm the original incident."
+  },
+  {
+    "id": "V06",
+    "title": "Rowan Howard-Jones — swarm investigation",
+    "provider_title": "HackTalk: Rowan Howard-Jones",
+    "scheduled_utc": "2026-11-06T19:00:00Z",
+    "url": "https://us06web.zoom.us/rec/share/CPYCqBq2YRdQczggQMYlXNYpP6HJXlKdEZK4mKcJlT5S0cd1KHiXahEoX8Ycu52K.XTMOYyvML7pKrsLP",
+    "duration_seconds": 2937,
+    "transcript_retrieved": true,
+    "transcript_sha256": "b6f713f64b6f655319248162d89402b162589f81c293de0cee412b95194ffe69",
+    "transcript_bytes": 63333,
+    "review_method": "Automatic captions retrieved; research-relevant passages reviewed. No claim of full audiovisual viewing.",
+    "segments": [
+      {
+        "timestamp": "24:14",
+        "note": "Detectors based on current limitation-workarounds can become brittle as agent capabilities change."
+      },
+      {
+        "timestamp": "33:46; 36:11",
+        "note": "Adversaries can trade off cost against visibility; a detector trained on observed incidents may overfit current samples."
+      }
+    ],
+    "project_implication": "Differentiate fleet from swarm, preserve attribution uncertainty, and hold out mechanisms rather than just paraphrases."
+  },
+  {
+    "id": "V07",
+    "title": "Elias Stengel-Eskin — emergent communication",
+    "provider_title": "HackTalk: Elias Stengel-Eskin",
+    "scheduled_utc": "2026-11-06T20:15:00Z",
+    "url": "https://us06web.zoom.us/rec/share/5hdxZjVfeJzmvZVX4RexSGjFW3DYi0MwwYNw3hlLrZgQwonxZPyg6io03GXoo781.djuxVD-HTEEPHxdA",
+    "duration_seconds": 3491,
+    "transcript_retrieved": true,
+    "transcript_sha256": "44334ec89a20c1121ec025a99654b61d4eb8642150356c6a532c1b1ac6332662",
+    "transcript_bytes": 71583,
+    "review_method": "Automatic captions retrieved; research-relevant passages reviewed. No claim of full audiovisual viewing.",
+    "segments": [
+      {
+        "timestamp": "36:22",
+        "note": "Communication constraints can induce compressed language and abbreviations."
+      },
+      {
+        "timestamp": "47:41",
+        "note": "The described cooperative setting is distinct from adversarial monitoring."
+      },
+      {
+        "timestamp": "50:44",
+        "note": "Public communication data may support follow-up detector research."
+      }
+    ],
+    "project_implication": "Include benign coordination. Shorthand, non-English text, or unusual syntax alone is not a malicious label."
+  },
+  {
+    "id": "V08",
+    "title": "Judd — kickoff",
+    "provider_title": "Kickoff Talk: Swarm Alignment Hackathon",
+    "scheduled_utc": "2026-11-06T21:30:00Z",
+    "url": "https://us06web.zoom.us/rec/share/1d4YC_CQLFIA8bY6EuAOpNovn0A16TUQ6ec2XWEHwN4bWOTlXVBkWqXeanyC7XLn.QTe7t5x9ZKnW8HwA",
+    "duration_seconds": 2934,
+    "transcript_retrieved": true,
+    "transcript_sha256": "e82283b743bd8ba3fa29c704fb21733aad8f3ad176f9abdd671aff311cf67f59",
+    "transcript_bytes": 54323,
+    "review_method": "Automatic captions retrieved; research-relevant passages reviewed. No claim of full audiovisual viewing.",
+    "segments": [
+      {
+        "timestamp": "Opening, approximately 03:00",
+        "note": "Research usefulness, independent thinking and publication/dual-use judgment matter."
+      },
+      {
+        "timestamp": "23:32",
+        "note": "Be willing to change a failing approach rather than spend the whole weekend defending it."
+      }
+    ],
+    "project_implication": "A rigorous, bounded finding is more valuable than an unsupported ambitious story. Assess novelty against current work."
+  },
+  {
+    "id": "V09",
+    "title": "Kamil — logistics",
+    "provider_title": "Logistics Talk: Swarm Alignment Hackathon",
+    "scheduled_utc": "2026-11-06T22:30:00Z",
+    "url": "https://us06web.zoom.us/rec/share/o1v_ZDFrQa91lqwK1jUlyBVsoeMXUv29EPXYLv0AE0dfMJSMRYXYNUwANJOb_AhR.2uEr_XTuLQUOWUq6",
+    "duration_seconds": 1735,
+    "transcript_retrieved": true,
+    "transcript_sha256": "b3fcd2e63363daeb3d0955812c092b941ed97607fd0b07610f2b8eb2d7662353",
+    "transcript_bytes": 33371,
+    "review_method": "Automatic captions retrieved; research-relevant passages reviewed. No claim of full audiovisual viewing.",
+    "segments": [
+      {
+        "timestamp": "Main logistics talk",
+        "note": "Explains participation and submission logistics. Verify deadlines, formatting and resubmission rules against the current event page."
+      }
+    ],
+    "project_implication": "Protect writing and submission time. The report, required appendix and working links come before an optional video."
+  },
+  {
+    "id": "V10",
+    "title": "Justin Shenk — observing agent swarms",
+    "provider_title": "HackTalk: Justin Shenk",
+    "scheduled_utc": "2026-11-07T13:00:00Z",
+    "url": "https://us06web.zoom.us/rec/share/-deJ2gMShsUX8VvSXJ2sjt1fnYpUHBCh_llwuhNEPfGo6qnTypE3oB5IlgZs3Xo.fGIecdFLP9kGW7_U",
+    "duration_seconds": 1403,
+    "transcript_retrieved": true,
+    "transcript_sha256": "9582c234b9ae1996b633f96e6a5781c3624ae00afc90ff1bf20ac5a610802345",
+    "transcript_bytes": 28595,
+    "review_method": "Automatic captions retrieved; research-relevant passages reviewed. No claim of full audiovisual viewing.",
+    "segments": [
+      {
+        "timestamp": "07:07–07:25",
+        "note": "Distinguishes centrally managed fleets from emergent swarms."
+      },
+      {
+        "timestamp": "09:28",
+        "note": "Operational descriptions should support prediction and validation, not merely analogy."
+      },
+      {
+        "timestamp": "17:45; 19:22",
+        "note": "Concentrated activity is not by itself causal leadership; identity/revocation remain important questions."
+      }
+    ],
+    "project_implication": "Use operational definitions and interventions. Our known three-worker workflow does not establish emergent collective agency."
+  },
+  {
+    "id": "V11",
+    "title": "Jurgis Kemeklis — AI control",
+    "provider_title": "HackTalk: Jurgis Kemeklis",
+    "scheduled_utc": "2026-11-07T19:00:00Z",
+    "url": "https://us06web.zoom.us/rec/share/ANUGOErR5--7C_W3sexzuffjo2nvbm0yyTzAgwIqNXvjp2cikjrkq3FvNKOoLd8b.6-M-WkvIHdsyQgXh",
+    "duration_seconds": 3570,
+    "transcript_retrieved": true,
+    "transcript_sha256": "5fa6584c9431b38224d080d54afc563e82646061e2f8d4011c343be1b29221b3",
+    "transcript_bytes": 86143,
+    "review_method": "Automatic captions retrieved; research-relevant passages reviewed. No claim of full audiovisual viewing.",
+    "segments": [
+      {
+        "timestamp": "00:22–00:36",
+        "note": "Missing actions or evidence are a problem for oversight."
+      },
+      {
+        "timestamp": "27:42",
+        "note": "Control evaluates safety alongside usefulness under an adversarial assumption."
+      },
+      {
+        "timestamp": "36:33–37:25",
+        "note": "Multiple monitors and larger context bring scaling and evidence-selection questions."
+      },
+      {
+        "timestamp": "53:44–54:26",
+        "note": "Log manipulation limits what a monitor can infer."
+      }
+    ],
+    "project_implication": "Separate detection from prevention, measure legitimate acceptance, and disclose the trusted-recorder boundary."
+  }
+]
