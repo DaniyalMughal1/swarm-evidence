@@ -36,13 +36,13 @@ for model in (Q, G):
         if not rows:
             continue
         lines.append(f"\n**{model}, {cap:,}-token cap** (60 held-out trajectories, 6 unseen families)\n")
-        lines.append("| Method | AUROC (family 95% CI) | Violation verdicts TP/FP | Abstain | Invalid | Gold recall | Billed input tokens | Over cap | Rule monitor AUROC |")
+        lines.append("| Method | AUROC (family 95% CI) | Violation verdicts TP/FP | Abstain | Invalid predictions | Gold recall | Billed input tokens | Over cap | Rule monitor AUROC |")
         lines.append("|---|---|---|---|---|---|---|---|---|")
         for lab, r in rows:
             lines.append(f"| {lab} | " + " | ".join(r) + " |")
     full = S["models"][model]["arms"].get("full@nocap")
     if full and not full.get("incomplete"):
-        lines.append(f"\nFull log, no cap ({model}): AUROC {f(full['auroc'])}, mean {full['mean_input_tokens']:.0f} billed input tokens, {full['invalid']} invalid outputs.")
+        lines.append(f"\nFull log, no cap ({model}): AUROC {f(full['auroc'])}, mean {full['mean_input_tokens']:.0f} billed input tokens, {full['invalid']} invalid predictions.")
     c = S["models"][model]["contrasts"].get("dependency-lexical@2000")
     if c:
         lo, hi = c["ci95_family_bootstrap"]
