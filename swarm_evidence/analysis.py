@@ -275,7 +275,9 @@ def run_analysis(root: Path):
                         mm = arm_metrics(ps, labels, cases, gold, th.get((model, arm, cap)))
                         m["visibility"][f"{arm}@{cap}@{vis}"] = {k: mm[k] for k in (
                             "auroc", "auroc_ci_family", "gold_recall", "invalid", "abstain_valid",
-                            "verdict_violation_tp", "verdict_violation_fp", "benign_accepted", "violations_accepted")}
+                            "verdict_violation_tp", "verdict_violation_fp", "benign_accepted", "violations_accepted",
+                            "invalid_responses", "n_valid", "auroc_valid_only", "auroc_missing_best",
+                            "auroc_missing_worst", "cap_overruns", "max_input_tokens")}
         # single-worker controls
         for arm in ARM_ORDER:
             ps = sel(model, "control", arm, 2000)
