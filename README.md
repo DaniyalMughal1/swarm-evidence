@@ -8,9 +8,10 @@ In plain terms: one AI worker registers data under a restrictive license, a seco
 
 ## Findings
 
-- **Retrieval.** Walking recorded dependencies backward from the action under review kept almost all of the decisive evidence at a 2,000-token cap. Lexical, BM25, chronological and isolated review kept a quarter to a third of it.
-- **Detection.** For the LLM monitor, this raised held-out AUROC compared with lexical retrieval. The gain was not resolved at the level of template families: only 6 held-out families were tested, and the interval includes zero.
-- **Judgment was the bottleneck.** On the *same* selected evidence, a short deterministic checker was far more accurate than the 397B model. The model ignored policy clauses about which inputs carry records (join and deduplication *references*), which produced false alarms.
+- **Retrieval.** Walking recorded dependencies backward from the action under review kept almost all of the decisive evidence at a 2,000-token cap. Lexical, BM25, lexical+PRF, chronological and shuffled-graph selection kept a quarter to about a third of it. Isolated per-worker review saw no events at this cap, because its repeated prompt overhead used up each worker's share.
+- **Detection.** With the LLM monitor at 2,000 tokens, held-out AUROC was 0.75 with dependency evidence and 0.55 with lexical retrieval. This pre-registered primary contrast is **not resolved**: only 6 held-out template families were tested, and the family-bootstrap interval for the difference includes zero.
+- **More context did not help.** Reading the whole log without a cap (about 8× the tokens) scored 0.55, and most of its false alarms cited unrelated legitimate work. At 6,000 tokens the non-graph baselines saw more evidence, but their extra evidence brought false alarms, and the gap to dependency selection widened instead of shrinking as pre-registered.
+- **Judgment was the bottleneck.** On the *same* selected evidence, a short deterministic checker made no false alarms, while the 397B model flagged every legitimate twin in the two families where a policy clause says which inputs carry records (join and deduplication *references*).
 - **The boundary is predictable.** Dependency selection misses evidence that is not an ancestor of the target (for example, an earlier payment of the same invoice). It also loses ground to lexical retrieval when dependency metadata is removed.
 
 Exact numbers, generated from saved records:
@@ -34,7 +35,7 @@ Exact numbers, generated from saved records:
 | `results/calls/` | Every model call: run key, stage, arm, cap, visibility, prompt hash, input hash, shown event IDs, raw and parsed output, billed tokens, cost, latency |
 | `results/analysis/`, `results/offline/`, `figures/` | Regenerated summary, tables, predictions, model-independent results and figures |
 | `report/` | Official Apart template, report builder, report content, PDF, and `numbers_used.json` for the number audit |
-| `tests/` | 179 offline stdlib tests |
+| `tests/` | 185 offline stdlib tests (4 expected failures pin documented gaps) |
 | `docs/`, `research/` | Research pack: event brief, 32 readings, 11 recordings, related work, plan and spec |
 
 ## Reproduce

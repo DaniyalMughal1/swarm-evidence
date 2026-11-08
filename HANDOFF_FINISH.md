@@ -2,7 +2,7 @@
 
 Official deadline: **2026-11-09 06:59 Toronto** (Nov 8 23:59 AoE). Self-imposed target: submission-ready by **23:00 Toronto, Nov 8**. The user registers and submits. Do not contact the organizers.
 
-Repo: `/Users/daniyalmughal/Documents/Codex/2026-11-08/https-apartresearch-com-sprints-swarm-alignment-2/outputs/swarm-evidence`. The work is on branch `implement-experiment`, not yet pushed. `main` holds only the research pack. Use `.venv/bin/python` (Python 3.12 with adaption 0.19.0, matplotlib, python-docx, pymupdf). LibreOffice is at `/Applications/LibreOffice.app`.
+Repo: the local `swarm-evidence` checkout (the absolute path is kept out of public files). The work is on branch `implement-experiment`, not yet pushed. `main` holds only the research pack. Use `.venv/bin/python` (Python 3.12 with adaption 0.19.0, matplotlib, python-docx, pymupdf). LibreOffice is at `/Applications/LibreOffice.app`.
 
 Read first: `AGENTS.md`, `protocol/PROTOCOL_FREEZE.json`, `protocol/POST_FREEZE_CHANGES.md`, this file.
 
