@@ -310,6 +310,9 @@ def main():
     doc = Document(str(TEMPLATE))
     meta = content.front_matter(N)
     fill_front_matter(doc, meta["title"], meta["authors"], meta["abstract"])
+    doc.core_properties.title = meta["title"]
+    doc.core_properties.author = ", ".join(n for n, _ in meta["authors"])
+    doc.core_properties.last_modified_by = doc.core_properties.author
     clear_body_after_front_matter(doc)
     render(content.body(N), doc)
     if not os.environ.get("REPORT_DRAFT"):  # a final build must not ship placeholders or missing values
