@@ -65,7 +65,7 @@ def fig_example(root: Path, out: Path):
     ax.set_xlabel("ledger sequence (finalization request arrives after the last event)")
     ax.spines["left"].set_visible(False)
     ax.tick_params(axis="y", length=0)
-    fig.subplots_adjust(left=0.11, right=0.70, top=0.97, bottom=0.17)
+    fig.subplots_adjust(left=0.135, right=0.70, top=0.97, bottom=0.17)
     fig.savefig(out)
     plt.close(fig)
 
@@ -100,13 +100,14 @@ def fig_main(summary, model, out: Path):
             ax.text(len(arms) - 0.5, full["auroc"] + 0.015, f"full log, no cap: {full['auroc']:.2f}", ha="right",
                     fontsize=6.5, color=INK2)
         ax.set_xticks(range(len(arms)))
-        ax.set_xticklabels([ARM_LABEL[a].replace(" (3 calls)", "\n(3 calls)").replace("Shuffled graph", "Shuffled\ngraph")
-                            for a in arms], rotation=0, fontsize=6.5)
+        ax.set_xticklabels([ARM_LABEL[a].replace(" (3 calls)", "") for a in arms], rotation=30, ha="right",
+                           rotation_mode="anchor", fontsize=7)
+        ax.set_xlim(-0.6, len(arms) - 0.4)
         ax.set_title(f"{cap:,}-token input cap", fontsize=8.5, color=INK)
         ax.set_ylim(0, 1.05)
         _style(ax)
     axes[0].set_ylabel("held-out AUROC")
-    fig.subplots_adjust(left=0.07, right=0.99, top=0.9, bottom=0.2, wspace=0.06)
+    fig.subplots_adjust(left=0.07, right=0.99, top=0.9, bottom=0.25, wspace=0.06)
     fig.savefig(out)
     plt.close(fig)
 
@@ -153,10 +154,11 @@ def _visibility_panel(summary, model, ax, cap, title):
                 hs.append(v["auroc"])
         ax.bar(xs, hs, width=0.36, color=COLORS[arm], label=ARM_LABEL[arm], zorder=3)
         for x, h in zip(xs, hs):
-            ax.text(x, h + 0.015, f"{h:.2f}", ha="center", va="bottom", fontsize=5.5, color=INK)
+            ax.text(x, h + 0.015, f"{h:.2f}", ha="center", va="bottom", fontsize=6, color=INK)
     ax.axhline(0.5, color=INK2, lw=0.7, ls=(0, (3, 2)))
     ax.set_xticks(range(len(conds)))
     ax.set_xticklabels(names, fontsize=6.5)
+    ax.set_xlim(-0.65, 3.65)
     ax.set_xlabel("dependency relations masked")
     ax.set_ylim(0, 1.08)
     ax.set_title(title, fontsize=8, color=INK, loc="left")
