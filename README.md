@@ -9,14 +9,49 @@ In plain terms: one AI worker registers data under a restrictive license, a seco
 ## Findings
 
 - **Retrieval.** Walking recorded dependencies backward from the action under review kept almost all of the decisive evidence at a 2,000-token cap. Lexical, BM25, lexical+PRF, chronological and shuffled-graph selection kept a quarter to about a third of it. Isolated per-worker review saw no events at this cap, because its repeated prompt overhead used up each worker's share.
-- **Detection.** With the LLM monitor at 2,000 tokens, held-out AUROC was 0.75 with dependency evidence and 0.55 with lexical retrieval. This pre-registered primary contrast is **not resolved**: only 6 held-out template families were tested, and the family-bootstrap interval for the difference includes zero.
-- **More context did not help.** Reading the whole log without a cap (about 8× the tokens) scored 0.55, and most of its false alarms cited unrelated legitimate work. At 6,000 tokens the non-graph baselines saw more evidence, but their extra evidence brought false alarms, and the gap to dependency selection widened instead of shrinking as pre-registered.
-- **Judgment was the bottleneck.** On the *same* selected evidence, a short deterministic checker made no false alarms, while the 397B model flagged every legitimate twin in the two families where a policy clause says which inputs carry records (join and deduplication *references*).
-- **The boundary is predictable.** Dependency selection misses evidence that is not an ancestor of the target (for example, an earlier payment of the same invoice). It also loses ground to lexical retrieval when dependency metadata is removed.
+- **Detection.** With the primary monitor (Qwen 3.5 397B) at 2,000 tokens, held-out AUROC was 0.75 with dependency evidence and 0.55 with lexical retrieval. This pre-registered primary contrast is **not resolved**: only 6 held-out template families were tested, and the family-bootstrap interval for the difference includes zero. With the pre-registered second model (Gemma 4 31B) the same comparison was 0.92 versus 0.53, an interval that excludes zero; with six families these intervals are descriptive.
+- **More context did not help.** Reading the whole log without a cap (about 8× the tokens) scored 0.55, and most of its false alarms cited unrelated legitimate work. At 6,000 tokens the non-graph baselines saw more evidence, but it brought false alarms. The gap to dependency selection widened against three of the four non-graph baselines and narrowed only against lexical+PRF, so the pre-registered prediction that it would shrink (H3) was not supported.
+- **Judgment depended on the model.** On the *same* selected evidence, a short deterministic checker made no false alarms, while Qwen flagged every legitimate twin in the two families where a policy clause says which inputs carry records (join and deduplication *references*). Gemma flagged none of them, so this failure is model-specific.
+- **The boundary is predictable.** Dependency selection misses evidence that is not an ancestor of the target (for example, an earlier payment of the same invoice). Masking dependency metadata cut its evidence recall from 0.96 to 0.44–0.65 and the LLM's AUROC from 0.75 to 0.53–0.63, while lexical retrieval was barely affected.
 
 Exact numbers, generated from saved records:
 
 <!-- results:start -->
+**qwen3.5-397b, 2,000-token cap** (60 held-out trajectories, 6 unseen families)
+
+| Method | AUROC (family 95% CI) | Violation verdicts TP/FP | Abstain | Gold recall | Billed input tokens | Rule monitor AUROC |
+|---|---|---|---|---|---|---|
+| Dependency | 0.75 (0.50–0.95) | 25/12 | 0 | 0.96 | 1155 | 0.92 |
+| Lexical | 0.55 (0.52–0.61) | 0/0 | 59 | 0.25 | 1653 | 0.50 |
+| Chronological | 0.53 (0.47–0.61) | 3/3 | 51 | 0.36 | 1634 | 0.50 |
+| BM25 | 0.56 (0.52–0.62) | 1/0 | 59 | 0.34 | 1583 | 0.50 |
+| Lexical+PRF | 0.45 (0.33–0.54) | 0/0 | 60 | 0.27 | 1660 | 0.50 |
+| Shuffled graph | 0.46 (0.37–0.50) | 0/0 | 57 | 0.25 | 1133 | 0.50 |
+| Isolated (3 calls) | 0.50 (0.50–0.50) | 0/0 | 60 | 0.00 | 1328 | 0.50 |
+
+**qwen3.5-397b, 6,000-token cap** (60 held-out trajectories, 6 unseen families)
+
+| Method | AUROC (family 95% CI) | Violation verdicts TP/FP | Abstain | Gold recall | Billed input tokens | Rule monitor AUROC |
+|---|---|---|---|---|---|---|
+| Dependency | 0.77 (0.59–0.93) | 25/12 | 0 | 0.96 | 1155 | 0.92 |
+| Lexical | 0.44 (0.28–0.57) | 9/13 | 28 | 0.70 | 5534 | 0.62 |
+| Chronological | 0.47 (0.31–0.58) | 9/10 | 41 | 0.64 | 5478 | 0.58 |
+| BM25 | 0.48 (0.38–0.62) | 7/7 | 41 | 0.61 | 5446 | 0.60 |
+| Lexical+PRF | 0.60 (0.50–0.68) | 10/5 | 37 | 0.64 | 5528 | 0.62 |
+| Shuffled graph | 0.51 (0.44–0.58) | 1/0 | 58 | 0.25 | 1133 | 0.50 |
+| Isolated (3 calls) | 0.50 (0.50–0.50) | 1/1 | 48 | 0.53 | 4879 | 0.50 |
+
+Full log, no cap (qwen3.5-397b): AUROC 0.55, mean 9327 billed input tokens.
+
+Primary contrast (qwen3.5-397b, 2k, full visibility): dependency − lexical AUROC = +0.20 (paired family bootstrap 95% CI -0.07 to +0.41; 4 of 6 families favour dependency).
+
+**gemma-4-31b-it, 2,000-token cap** (60 held-out trajectories, 6 unseen families)
+
+| Method | AUROC (family 95% CI) | Violation verdicts TP/FP | Abstain | Gold recall | Billed input tokens | Rule monitor AUROC |
+|---|---|---|---|---|---|---|
+| Dependency | 0.92 (0.76–1.00) | 24/0 | 0 | 0.96 | 1190 | 0.92 |
+
+Total model spend: 4.526 Adaption credits over 2897 recorded calls (pilots, both models, exploratory runs and transport-error reservations).
 <!-- results:end -->
 
 ## What is in the repository
@@ -62,7 +97,7 @@ python3 -m swarm_evidence offline --split test --caps 2000,6000 --visibility ful
 python3 -m swarm_evidence analyze
 ```
 
-`generate` rebuilds byte-identical data files (a test checks this). `validate` runs the gate, the leakage audit and the mask audits. `analyze` regenerates every table and figure from `results/calls/`. `python3 report/build_report.py` rebuilds the PDF; it needs LibreOffice. `python3 -m swarm_evidence audit-report` checks every report number against the summary.
+`generate` rebuilds byte-identical data files (a test checks this). `validate` reports the stored validity-gate results and re-runs the leakage and mask audits. `analyze` regenerates every table and figure from `results/calls/`. `python3 report/build_report.py` rebuilds the PDF; it needs LibreOffice. `python3 -m swarm_evidence audit-report` checks every result value the report draws from the summary against it (fixed design numbers typed into the text are not covered).
 
 Live model calls are opt-in. Put `ADAPTION_API_KEY`, `ADAPTION_MODEL` and `SWARM_MAX_CREDITS` in a local `.env` (gitignored), then run a stage, for example:
 
@@ -70,7 +105,7 @@ Live model calls are opt-in. Put `ADAPTION_API_KEY`, `ADAPTION_MODEL` and `SWARM
 python3 -m swarm_evidence run --stage stage1 --stage-budget 5 --rpm 24
 ```
 
-Completed calls are skipped on resume. `scripts/run_primary_chain.sh` and `scripts/run_followup_chain.sh` run the full pre-registered order.
+Completed calls are skipped on resume. `scripts/run_primary_chain.sh` runs the primary model's pre-registered stages in order; `scripts/run_followup_chain.sh` runs the second model's stages and the labelled exploratory checks.
 
 ## Honest scope
 
