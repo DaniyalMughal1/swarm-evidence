@@ -163,7 +163,7 @@ def body(N):
               "and gold evidence spanning at least two workers (the last two are waived for the single-worker "
               "controls). Gold evidence is one deletion-minimal event set on which the rule monitor retains the "
               "oracle label; recall measures coverage of that chosen witness, and alternative sufficient evidence sets "
-              f"may exist. {N.i('dataset/gate_passed')} of {N.i('dataset/n_base_cases')} base cases pass. The family split was "
+              f"may exist. " + (f"All {N.i('dataset/gate_passed')} base cases pass." if N.get('dataset/gate_passed') == N.get('dataset/n_base_cases') else f"Of {N.i('dataset/n_base_cases')} base cases, {N.i('dataset/gate_passed')} pass.") + f" The family split was "
               "fixed before any model call: development A1, A3, B1, B3, C1, C3 (prompt design A1/B1/C1, threshold "
               "calibration A3/B3/C3); held out A2, A4, B2, B4, C2, C4."),
         ("h3", "3.2 Evidence selection under a cap"),
@@ -187,7 +187,7 @@ def body(N):
          "**Figure 1.** A development violating trajectory (family A1, synthetic data). Each dot is a recorded "
          "event in a worker's lane; black dots are the gold minimal evidence (the restricted source registered by "
          "W3, a transform and a merge by W1, and the staged export by W2) and arrows are recorded lineage. Ticks show what "
-         "each selector keeps at the 2,000-token cap. Dependency selection reaches the old license event; lexical "
+         "each selector keeps at the 2,000-token cap. Dependency selection reaches the restricted source registered early in the log; lexical "
          "retrieval fills the budget with policy-word matches from unrelated work; chronological review sees only "
          "the tail."),
         ("h3", "3.3 Monitors and protocol"),
@@ -448,11 +448,12 @@ def join(items):
     return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
 
 
-def h3_split(N):
+def h3_split(N, M=None):
     """Per non-graph baseline: dependency-minus-baseline AUROC difference at 2k and 6k (pre-registered H3)."""
+    M = M or Q
     out = {}
     for b in NON_GRAPH:
-        k2, k6 = f"{Q}/contrasts/dependency-{b}@2000/diff", f"{Q}/contrasts/dependency-{b}@6000/diff"
+        k2, k6 = f"{M}/contrasts/dependency-{b}@2000/diff", f"{M}/contrasts/dependency-{b}@6000/diff"
         if N.has(k2) and N.has(k6):
             out[b] = (N.get(k2), N.get(k6))
     return out
@@ -716,6 +717,11 @@ def hypotheses_paragraph(N):
               "not supported." if not shrank else
               f"shrank against {len(shrank)} of {len(sp)} non-graph baselines "
               f"({join(LABEL[b] for b in shrank)}) and grew against the rest."))
+        gs = h3_split(N, G) if stage_done(N, G, "stage3") else {}
+        if gs:
+            g_shr = [b for b, (a2, a6) in gs.items() if a6 < a2]
+            h3 = h3[:-1] + ("; with the second model it shrank against "
+                            + ("all four" if len(g_shr) == len(gs) == 4 else f"{len(g_shr)} of {len(gs)}") + " (Appendix D).")
     else:
         h3 = "H3 (advantage shrinks at 6k): not tested; the 6,000-token stage had not finished."
     v = f"{Q}/visibility"
@@ -865,6 +871,32 @@ def llm_statement():
     return p.read_text().strip() if p.exists() else "[LLM USAGE STATEMENT TO CONFIRM]"
 
 
+def second_model_6k(N):
+    if not stage_done(N, G, "stage3"):
+        return []
+    d6, l6 = f"{G}/arms/dependency@6000", f"{G}/arms/lexical@6000"
+    c6 = f"{G}/contrasts/dependency-lexical@6000"
+    gs = h3_split(N, G)
+    shrank = [b for b, (a2, a6) in gs.items() if a6 < a2]
+    over = {a: N.get(f"{G}/arms/{a}@6000/cap_overruns") for a in BUDGETED}
+    inv = {a: N.get(f"{G}/arms/{a}@6000/invalid") for a in BUDGETED}
+    txt = (f"**Second model at 6,000 tokens.** Gemma's dependency AUROC was {N.f(d6 + '/auroc')} versus "
+           f"{N.f(l6 + '/auroc')} lexical (difference {sg(N.get(c6 + '/diff'))} {ci(N, c6 + '/ci95_family_bootstrap')}). "
+           + ("Its advantage over the non-graph baselines shrank relative to 2,000 tokens against "
+              + ("all four" if len(shrank) == len(gs) == 4 else f"{len(shrank)} of {len(gs)}")
+              + f", the direction H3 predicted, whereas for Qwen it grew against "
+              f"{sum(1 for a2, a6 in h3_split(N).values() if a6 > a2)} of {len(h3_split(N))}. "
+              if gs else ""))
+    if sum(over.values()):
+        mx = max(N.get(f"{G}/arms/{a}@6000/max_input_tokens") for a in BUDGETED if over[a])
+        txt += (f"Gemma's tokenizer counts more tokens than the byte-based estimate calibrated for this study, so "
+                f"{sum(over.values())} of its calls at this cap billed above 6,000 input tokens "
+                f"({join(f'{v} {LABEL[a]}' for a, v in over.items() if v)}; at most {mx:,}). ")
+    if sum(inv.values()):
+        txt += f"It had {sum(inv.values())} invalid case-level predictions at this cap (Table 4)."
+    return [("p", txt)]
+
+
 def sensitivity_section(N):
     """Pre-registered invalid-output sensitivity (valid-only and best/worst AUROC) plus descriptive paired checks."""
     rows = []
@@ -931,6 +963,7 @@ def appendix_d(N):
         out.append(("table", TABLE_HEAD, arm_rows(N, Q, 6000),
                     "**Table 3.** Held-out results at the 6,000-token cap, qwen3.5-397b; columns as in Table 1.",
                     {"size": 8, "col_widths": TABLE_WIDTHS}))
+    out += second_model_6k(N)
     out += sensitivity_section(N)
     inv = gemma_invalid(N) if gemma_ready(N) else {}
     if sum(inv.values()):
@@ -956,7 +989,7 @@ def appendix_d(N):
                 "events at 2,000 tokens, so its AUROC there is exactly 0.5. The same numbers are in Tables 1 and 3."))
     if gemma_ready(N) and (ROOT / "figures/figS1_auroc_by_method_secondary.png").exists():
         g6 = stage_done(N, G, "stage3")
-        out.append(("fig", "figures/figS1_auroc_by_method_secondary.png", 6.3 if g6 else 4.2,
+        out.append(("fig", "figures/figS1_auroc_by_method_secondary.png", 5.7 if g6 else 4.2,
                     "**Figure 4.** The same for the pre-registered second model, gemma-4-31b-it. Only methods scored "
                     "on all 60 held-out trajectories are shown; invalid outputs score 0.5."
                     + ("" if g6 else " Its 6,000-token stage had not finished when this version was built, so no "
