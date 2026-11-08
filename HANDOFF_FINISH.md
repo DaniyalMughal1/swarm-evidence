@@ -1,4 +1,12 @@
-# Handoff: finish Swarm Evidence (written 2026-11-08 14:15 Toronto)
+# Handoff: finish Swarm Evidence
+
+> **Final status (November 8, 2026, evening, Toronto).** Everything below this box is the historical handoff written at 14:15; its progress counts, estimates and "missing author details" step are out of date. Current state:
+> - All pre-registered stages finished for qwen3.5-397b (stages 1–4, controls, calibration) and for gemma-4-31b-it (stages 1–3 and calibration; masking and controls were run for the primary model only). Exploratory runs (reasoning-enabled monitor, temperature-0 repeat, live slice) finished and are reported in Appendix C; the reasoning run is inconclusive because 71 of 120 outputs hit the output cap.
+> - The final analysis, figures, README results block and report PDF are regenerated from `results/calls/` and committed. `report/build_report.py` passes without `REPORT_DRAFT`, `python -m swarm_evidence audit-report` passes, and the offline tests pass with the 4 documented expected failures.
+> - Every change after the freeze, including those prompted by an independent AI-assisted review (OpenAI Codex), is in `protocol/POST_FREEZE_CHANGES.md`.
+> - Author: Daniyal Mughal, Independent Researcher. The human-review sentence in `report/llm_statement.txt` describes the author's reading as stated by the author; edit it if that changes before submission.
+> - Remaining for the author: final read of the PDF, approval to merge `implement-experiment` into `main`, and the submission itself.
+
 
 Official deadline: **2026-11-09 06:59 Toronto** (Nov 8 23:59 AoE). Self-imposed target: submission-ready by **23:00 Toronto, Nov 8**. The user registers and submits. Do not contact the organizers.
 

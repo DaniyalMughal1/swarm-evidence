@@ -64,13 +64,16 @@ Primary contrast (qwen3.5-397b, 2k, full visibility): dependency − lexical AUR
 | Dependency | 0.92 (0.75–1.00) | 25/0 | 0 | 0 | 0.96 | 1190 | 0 | 0.92 |
 | Lexical | 0.65 (0.55–0.75) | 8/1 | 19 | 3 | 0.70 | 5705 | 26 | 0.62 |
 | Chronological | 0.57 (0.51–0.64) | 2/1 | 36 | 2 | 0.64 | 5648 | 2 | 0.58 |
+| BM25 | 0.61 (0.53–0.67) | 5/2 | 25 | 2 | 0.61 | 5623 | 18 | 0.60 |
+| Lexical+PRF | 0.64 (0.51–0.77) | 7/2 | 25 | 2 | 0.64 | 5698 | 28 | 0.62 |
 | Shuffled graph | 0.50 (0.47–0.55) | 0/0 | 55 | 1 | 0.25 | 1168 | 0 | 0.50 |
+| Isolated (3 calls) | 0.47 (0.42–0.53) | 0/0 | 58 | 2 | 0.53 | 5032 | 0 | 0.50 |
 
 Full log, no cap (gemma-4-31b-it): AUROC 0.78, mean 9628 billed input tokens, 8 invalid predictions.
 
 Same contrast, secondary model (gemma-4-31b-it, 2k, full visibility): dependency − lexical AUROC = +0.39 (paired family bootstrap 95% CI +0.17 to +0.50; 5 of 6 families favour dependency).
 
-Total model spend: 6.773 Adaption credits over 4698 recorded calls (pilots, both models, exploratory runs and transport-error reservations).
+Total model spend: 6.847 Adaption credits over 4914 recorded calls (pilots, both models, exploratory runs and transport-error reservations).
 <!-- results:end -->
 
 ## What is in the repository
@@ -135,7 +138,7 @@ Completed calls are skipped on resume. `scripts/run_primary_chain.sh` runs the p
 - The full-log result is one model in one synthetic setting. It does not show that more context generally makes monitoring worse; Gemma's full-log score (0.78) was lower than its dependency score (0.92) but well above Qwen's 0.55.
 - The exploratory reasoning-enabled run is inconclusive: 71 of 120 outputs were cut off at the 4,096-token output cap, most before any answer text.
 - All pre-registered trajectories are replayed scripts. A small exploratory live slice (12 seeds × 2 conditions, one domain, an instructed violation) used model-driven workers; there the worker disclosed the restricted table in its notes, which makes detection easier.
-- Known gaps: isolated review sees no events at 2,000 tokens; at 6,000 tokens, 10 full-visibility calls and 4 masking-run calls billed slightly over the cap (at most 6,078 tokens); invalid predictions are scored 0.5 under the frozen policy, with valid-only and best/worst sensitivity in Appendix D of the report; four expected-failure tests pin documented gaps (rule-monitor over-flagging in two hand-built worlds, IDs inside notes not masked, isolated per-call budget). See `protocol/POST_FREEZE_CHANGES.md` for every change after the freeze.
+- Known gaps: isolated review sees no events at 2,000 tokens; at 6,000 tokens, 10 full-visibility and 4 masking-run Qwen calls billed slightly over the cap (at most 6,078 tokens), and 74 Gemma calls did because its tokenizer counts more tokens than the byte-based estimate (at most 6,267); invalid predictions are scored 0.5 under the frozen policy, with valid-only and best/worst sensitivity in Appendix D of the report; four expected-failure tests pin documented gaps (rule-monitor over-flagging in two hand-built worlds, IDs inside notes not masked, isolated per-call budget). See `protocol/POST_FREEZE_CHANGES.md` for every change after the freeze.
 
 ## Prior work and provenance
 
