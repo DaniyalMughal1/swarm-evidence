@@ -23,7 +23,7 @@ Ticked items were completed and checked in the repository. Unticked items need t
 - [x] Every method's actual tokens, costs, invalid outputs and abstentions included.
 - [x] Family counts, uncertainty, selected evidence and corruption semantics disclosed.
 - [x] Null results and stopped extensions honestly reported.
-- [ ] Reproduction works from a fresh clone using public, sanitized artifacts.
+- [x] Reproduction works from a fresh clone using public, sanitized artifacts.
 
 ## Report gates
 
