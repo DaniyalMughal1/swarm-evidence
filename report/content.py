@@ -257,9 +257,10 @@ def body(N):
          rows,
          "**Table 1.** Held-out results, qwen3.5-397b (60 trajectories, 6 unseen families; CI: 95% family bootstrap). "
          "TP/FP: violation verdicts on violating/legitimate runs; Abst.: insufficient evidence; Recall: gold evidence "
-         "shown; Tokens: mean billed input; Rule: rule-monitor AUROC on the same evidence.",
+         "shown; Tokens: mean billed input; Rule: rule-monitor AUROC on the same evidence (1.00 on the full log by the "
+         "validity gate).",
          {"size": 7, "col_widths": [0.92, 0.98, 0.48, 0.44, 0.47, 0.5, 0.4, 0.98, 0.48, 0.47, 0.4]}),
-        ("p", "**More context did not help.** Reading the whole log without a cap (mean "
+        ("p", "**More context did not help Qwen.** Reading the whole log without a cap (mean "
               f"{N.get(fa + '/mean_input_tokens'):.0f} billed input tokens, "
               f"{N.get(fa + '/mean_input_tokens') / N.get(dep2 + '/mean_input_tokens'):.1f}× the dependency arm) "
               f"gave AUROC {N.f(fa + '/auroc')}: the model flagged {N.i(fa + '/verdict_violation_fp')} of 30 "
@@ -344,11 +345,13 @@ def body(N):
               "On the 9 single-worker control pairs, Qwen scored "
               f"{N.f(Q + '/controls/dependency/auroc')} (dependency), {N.f(Q + '/controls/lexical/auroc')} (lexical), "
               f"{N.f(Q + '/controls/chronological/auroc')} (chronological) and {N.f(Q + '/controls/full/auroc')} (full log); isolated review shows no events at this cap "
-              f"({N.f(Q + '/controls/isolated/auroc')}), so the controls do not test it. All {N.i('costs/n_calls_total')} "
-              f"recorded model calls, including pilots, cost {N.f('costs/total_credits', 2)} Adaption credits. "
+              f"({N.f(Q + '/controls/isolated/auroc')}), so the controls do not test it. Total spend, including pilots "
+              f"and reserved in-flight calls, was {N.f('costs/total_credits', 2)} Adaption credits for "
+              f"{N.i('costs/n_calls_total')} recorded calls. "
               + exploratory_pointer(N)),
     ]
     # ---------------- Discussion
+    q_role = role_fp(N, Q)
     b += [
         ("h2", "5. Discussion and Limitations"),
         ("p", "**What the results mean.** Under a tight budget, following recorded lineage is a cheap retrieval "
@@ -377,13 +380,13 @@ def body(N):
         ("h2", "6. Conclusion"),
         ("p", "At a fixed context budget, selecting evidence through recorded artifact dependencies retained "
               f"{N.pct(dep2 + '/gold_recall')} of decisive cross-agent evidence where lexical retrieval retained "
-              f"{N.pct(lex2 + '/gold_recall')}. The primary monitor's held-out AUROC was {N.f(dep2 + '/auroc')} with "
-              f"dependency evidence versus {N.f(lex2 + '/auroc')} with lexical evidence, a difference whose "
-              "family-level interval includes zero; its errors were misapplied role rules on evidence that a "
-              f"deterministic checker scored at {N.f('offline_test/dependency@2000@full/rule_auroc')}"
-              + (f" and the second model at {N.f(G + '/arms/dependency@2000/auroc')}" if gemma_ready(N) else "")
-              + ". Lineage selection fails predictably on "
-              "out-of-lineage constraints and missing metadata."),
+              f"{N.pct(lex2 + '/gold_recall')}. With the primary monitor the detection gain ({N.f(dep2 + '/auroc')} "
+              f"versus {N.f(lex2 + '/auroc')}) is unresolved; most of its false alarms ({q_role} of "
+              f"{N.i(dep2 + '/verdict_violation_fp')}) were misapplied role rules, on evidence that a deterministic "
+              f"checker scored at {N.f('offline_test/dependency@2000@full/rule_auroc')}"
+              + (f" and the second model, in a secondary result over six families, at "
+                 f"{N.f(G + '/arms/dependency@2000/auroc')}" if gemma_ready(N) else "")
+              + ". Lineage selection fails predictably on out-of-lineage constraints and missing metadata."),
         ("h2", "Code and Data"),
         ("p", f"{REPO} (MIT): synthetic data, labels, frozen protocol and every model call; `python -m "
               "swarm_evidence analyze` regenerates all tables and figures. No real or personal data."),
@@ -561,9 +564,9 @@ def second_model_coverage(N):
     if not g_done:
         return out + ("For gemma-4-31b-it, no held-out stage had finished when this version was built. Masking and "
                       "controls were run for the primary model only.")
-    out += "For gemma-4-31b-it, " + "; ".join(g_done) + " finished"
+    out += f"For gemma-4-31b-it, {join(g_done)} finished"
     if g_missing:
-        out += ("; " + "; ".join(g_missing) + " had not finished when this version was built and "
+        out += (f", while {join(g_missing)} had not finished when this version was built and "
                 + ("is" if len(g_missing) == 1 else "are") + " not reported")
     return out + ". Masking and controls were run for the primary model only."
 
@@ -676,7 +679,7 @@ def hypotheses_paragraph(N):
     lo = N.get(dl2 + "/ci95_family_bootstrap/0")
     h1 = ("H1 (dependency > lexical at 2k): positive point estimate, "
           + ("not resolved at the family level" if lo <= 0 else "interval excludes zero")
-          + (f" for the primary model; with the second model the interval "
+          + (f" for the primary model; in the secondary second-model analysis the interval "
              f"{'excludes' if N.get(G + '/contrasts/dependency-lexical@2000/ci95_family_bootstrap/0') > 0 else 'includes'} "
              "zero." if gemma_ready(N) else "."))
     flagged, total = N.get(oo + "/violations_flagged"), N.get(oo + "/violations_total")
@@ -713,9 +716,9 @@ def hypotheses_paragraph(N):
     h5 = ("H5 (rule monitor ≥ LLM on complete lineage): "
           + (f"supported on all five in-lineage families for {scope}." if all(ok) else
              f"supported in {sum(ok)} of {len(ok)} family-model cases."))
-    return ("**Pre-registered hypotheses.** " + " ".join([h1, h2, h3, h4, h5]) + " Per-family verdict counts, the "
-            "false-alarm citation counts and the identical-prompt repeat are descriptive analyses added after the "
-            "freeze; the runs in Appendix C are exploratory.")
+    return ("**Pre-registered hypotheses.** " + " ".join([h1, h2, h3, h4, h5]) + " Per-family breakdowns, false-alarm "
+            "citation counts and the identical-prompt repeat are descriptive post-freeze analyses; Appendix C runs "
+            "are exploratory.")
 
 
 def reasoning_paragraph(N, R):
@@ -723,8 +726,8 @@ def reasoning_paragraph(N, R):
     n_inv = N.get(d + "/invalid") + N.get(l + "/invalid")
     txt = ("**Reasoning-enabled monitor.** With Qwen's reasoning on (effort medium, 4,096-token output cap including "
            f"billed reasoning), {n_inv} of 120 outputs were invalid ({N.i(d + '/invalid')} dependency, "
-           f"{N.i(l + '/invalid')} lexical), all of them responses cut off when reasoning used up the output cap before an answer was "
-           f"written; dependency calls averaged {N.get(d + '/mean_output_tokens'):,.0f} output tokens. With invalid "
+           f"{N.i(l + '/invalid')} lexical), all of them cut off at the output cap after reasoning used almost all of it "
+           f"(most before any answer text); dependency calls averaged {N.get(d + '/mean_output_tokens'):,.0f} output tokens. With invalid "
            f"outputs scored 0.5, AUROC was {N.f(d + '/auroc')} with dependency evidence "
            f"({N.i(d + '/verdict_violation_tp')} true and {N.i(d + '/verdict_violation_fp')} false violation verdicts) "
            f"and {N.f(l + '/auroc')} with lexical evidence. ")
@@ -854,8 +857,8 @@ def appendix_d(N):
         out.append(("p", "**Second-model invalid outputs.** Scored 0.5 under the frozen policy: "
                     + join(f"{v} {LABEL.get(a, 'full-log')}" for a, v in inv.items() if v)
                     + " at 2,000 tokens or with the full log. Those at 2,000 tokens were repetition loops (\"our our "
-                    "our ...\"); the full-log ones were long answers cut off at the 384-token output cap or wrapped in "
-                    "code fences."))
+                    "our ...\"); of the full-log ones, all but one were long answers cut off at the 384-token output cap, and "
+                    "one contained two JSON answers."))
     out.append(("fig", "figures/fig2_auroc_by_method.png", 6.3,
                 "**Figure 3.** Held-out AUROC by selection method at two input caps (primary monitor qwen3.5-397b; error "
                 "bars: 95% family-bootstrap intervals over 6 held-out families; dashed line: chance; grey line: full log "
@@ -882,8 +885,14 @@ def appendix_c(N):
         out.append(("p", "**Reasoning-enabled monitor.** Planned, but not finished when this version was built; no result is reported."))
     if N.has(rep + "/n_cases") and N.has(rep_l + "/n_cases"):
         out.append(("p", "**Temperature-0 repeat.** Re-running stage 1 changed the score on "
-                         f"{N.i(rep + '/n_score_changed')} of {N.i(rep + '/n_cases')} dependency trajectories and "
-                         f"{N.i(rep_l + '/n_score_changed')} of {N.i(rep_l + '/n_cases')} lexical trajectories."))
+                         f"{N.i(rep + '/n_score_changed')} of {N.i(rep + '/n_cases')} dependency trajectories (the "
+                         f"verdict on {N.i(rep + '/n_verdict_changed')}) and on {N.i(rep_l + '/n_score_changed')} of "
+                         f"{N.i(rep_l + '/n_cases')} lexical trajectories (the verdict on "
+                         f"{N.i(rep_l + '/n_verdict_changed')}). "
+                         + ("One dependency-arm change was a C4 violation that the first run judged benign and the "
+                            "repeat flagged, so the out-of-lineage count in Section 4.2 (0 of 5) is a single-run "
+                            "result rather than a stable one."
+                            if "C4" in N.get(rep + "/verdict_changed_families") else "")))
     else:
         out.append(("p", "**Temperature-0 repeat.** Planned, but not finished when this version was built; no result is reported."))
     if not N.has(L + "/request/completed"):
