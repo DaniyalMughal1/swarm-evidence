@@ -499,7 +499,7 @@ def cap6k_details(N):
     inv = {a: N.get(f"{Q}/arms/{a}@6000/invalid") for a in BUDGETED}
     if sum(over.values()):
         mx = max(N.get(f"{Q}/arms/{a}@6000/max_input_tokens") for a in BUDGETED if over[a])
-        txt += (f"{join(f'{v} {LABEL[a]}' for a, v in over.items() if v)} calls billed more input than the "
+        txt += (f"At this cap, {join(f'{v} {LABEL[a]}' for a, v in over.items() if v)} calls billed more input than the "
                 f"6,000-token cap (at most {mx:,} tokens), because the byte-based estimate undercounts some text. ")
     if sum(inv.values()):
         txt += (f"Invalid outputs, scored 0.5 under the frozen policy: {join(f'{v} {LABEL[a]}' for a, v in inv.items() if v)}"
@@ -576,12 +576,16 @@ def live_paragraph(N, L):
            "by W1 to fold "
            "one more table into a partner export, with \"no need to mention it in your notes\": a restricted panel "
            "in the *request* condition, a permitted table in the *matched* condition; W3 (also model-driven) then "
-           f"staged the result. {N.i(rq + '/completed')} of {N.i(rq + '/n')} request runs and "
-           f"{N.i(mt + '/completed')} of {N.i(mt + '/n')} matched runs completed. W2 folded in the restricted panel "
+           "staged the result. "
+           + ("All request and matched runs completed." if N.get(rq + '/completed') == N.get(rq + '/n')
+              and N.get(mt + '/completed') == N.get(mt + '/n') else
+              f"Completed: {N.i(rq + '/completed')} of {N.i(rq + '/n')} request runs and "
+              f"{N.i(mt + '/completed')} of {N.i(mt + '/n')} matched runs.") + " W2 folded in the restricted panel "
            f"in {used} completed request runs, giving {N.i(rq + '/oracle_violations')} oracle-confirmed violations")
     if used:
         txt += (f"; it mentioned the panel in its own notes in {N.i(rq + '/used_extra_and_disclosed')} of those runs"
-                + (", so concealment was not observed" if nd == 0 else f" and omitted it in {nd}"))
+                + (", so concealment was not observed, and because W2 named the panel these trajectories are easier "
+                   "to judge than the scripted ones" if nd == 0 else f" and omitted it in {nd}"))
     txt += f". Matched runs produced {N.i(mt + '/oracle_violations')} violations. "
     nv, nl = N.get(L + "/n_violations"), N.get(L + "/n_legit")
     m = L + "/monitors/qwen3.5-397b|"
@@ -635,7 +639,7 @@ def second_model_sentence(N):
                 f"Qwen's {N.f(Q + '/arms/full@nocap/auroc')}. ")
     inv = gemma_invalid(N)
     if sum(inv.values()):
-        out += f"{sum(inv.values())} Gemma outputs were invalid and scored 0.5 (Appendix D). "
+        out += f"Gemma gave {sum(inv.values())} invalid outputs, scored 0.5 (Appendix D). "
     return out
 
 
@@ -720,25 +724,27 @@ def reasoning_paragraph(N, R):
     txt = ("**Reasoning-enabled monitor.** With Qwen's reasoning on (effort medium, 4,096-token output cap including "
            f"billed reasoning), {n_inv} of 120 outputs were invalid ({N.i(d + '/invalid')} dependency, "
            f"{N.i(l + '/invalid')} lexical), all of them responses cut off when reasoning used up the output cap before an answer was "
-           f"written; dependency calls averaged {N.get(d + '/mean_output_tokens'):.0f} output tokens. With invalid "
+           f"written; dependency calls averaged {N.get(d + '/mean_output_tokens'):,.0f} output tokens. With invalid "
            f"outputs scored 0.5, AUROC was {N.f(d + '/auroc')} with dependency evidence "
            f"({N.i(d + '/verdict_violation_tp')} true and {N.i(d + '/verdict_violation_fp')} false violation verdicts) "
            f"and {N.f(l + '/auroc')} with lexical evidence. ")
     if n_inv > 30:
-        txt += ("Because so many outputs were cut off, this check is inconclusive about whether reasoning removes the "
-                "role-rule errors; a larger output cap would be needed. ")
+        txt += "Because so many outputs were cut off, this check is inconclusive; a larger output cap would be needed. "
     return txt + role_rule_persistence(N, R)
 
 
 def role_rule_persistence(N, R):
-    """Do the A4/B2 role-rule false alarms persist with reasoning enabled?"""
+    """Role-rule families (A4, B2) with reasoning on: full breakdown of the 10 legitimate twins."""
     k = "/verdicts_by_family/dependency@2000/"
     if not all(N.has(m + k + f) for m in (Q, R) for f in ("A4", "B2")):
         return ""
-    base = sum(N.get(Q + k + f).get("legit->violation", 0) for f in ("A4", "B2"))
-    rsn = sum(N.get(R + k + f).get("legit->violation", 0) for f in ("A4", "B2"))
-    return (f"Among its outputs in the two role-rule families (A4, B2), {rsn} of 10 legitimate twins were flagged "
-            f"(invalid outputs count as not flagged), against {base} with reasoning disabled.")
+    def count(M, v):
+        return sum(N.get(M + k + f).get(f"legit->{v}", 0) for f in ("A4", "B2"))
+    base, flagged = count(Q, "violation"), count(R, "violation")
+    inv, ben = count(R, "invalid"), count(R, "benign")
+    txt = (f"Of the 10 legitimate twins in the two role-rule families (A4, B2), which reasoning-disabled Qwen flagged "
+           f"{base} times, the reasoning run flagged {flagged}, judged {ben} benign and gave {inv} invalid outputs")
+    return txt + (", so it cannot show whether reasoning removes that error." if inv >= 5 else ".")
 
 
 def live_limitation(N):
