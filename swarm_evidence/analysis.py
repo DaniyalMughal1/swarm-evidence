@@ -312,13 +312,17 @@ def run_analysis(root: Path):
     reps = defaultdict(dict)
     for p in preds:
         if cases[p["run_id"]]["subset"] == "test" and p["visibility"] == "full":
-            reps[(p["model"], p["arm"], p["cap"], p["run_id"])][p["replicate"]] = p["score"]
-    rep_stats = defaultdict(lambda: {"n_cases": 0, "n_score_changed": 0})
-    for (model, arm, cap, rid), d in reps.items():
+            reps[(p["model"], p["arm"], p["cap"], p["run_id"])][p["replicate"]] = (p["score"], p["verdict"])
+    rep_stats = defaultdict(lambda: {"n_cases": 0, "n_score_changed": 0, "n_verdict_changed": 0,
+                                     "verdict_changed_families": []})
+    for (model, arm, cap, rid), d in sorted(reps.items()):
         if len(d) > 1:
             k = f"{model}|{arm}|{cap}"
             rep_stats[k]["n_cases"] += 1
-            rep_stats[k]["n_score_changed"] += int(len(set(d.values())) > 1)
+            rep_stats[k]["n_score_changed"] += int(len({v[0] for v in d.values()}) > 1)
+            if len({v[1] for v in d.values()}) > 1:
+                rep_stats[k]["n_verdict_changed"] += 1
+                rep_stats[k]["verdict_changed_families"].append(cases[rid]["family"])
     summary["replicates"] = dict(rep_stats)
 
     # descriptive: dependency selection never pads, so its 2,000- and 6,000-token calls can carry identical prompts;
