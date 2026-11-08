@@ -75,7 +75,11 @@ def parse_output(text: str, shown_ids) -> dict:
         res["error"] = "not_object"
         return res
     s = obj.get("score")
-    if isinstance(s, bool) or not isinstance(s, (int, float)) or not math.isfinite(s) or not 0 <= s <= 1:
+    try:
+        finite = isinstance(s, (int, float)) and not isinstance(s, bool) and math.isfinite(s)
+    except OverflowError:  # integers too large for float conversion
+        finite = False
+    if not finite or not 0 <= s <= 1:
         res["error"] = "bad_score"
         return res
     v = obj.get("verdict")

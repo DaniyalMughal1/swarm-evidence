@@ -1,8 +1,10 @@
 """Missing dependency metadata: remove producer-consumer relations from every observer-visible field.
 
 A relation is (artifact a, producer event p, consumer event c) with a in out(p) and a in in(c).
-Masking replaces every occurrence of a inside c (inputs, arguments, version map, note) with a fresh
-placeholder unique to that relation, so the relation cannot be rebuilt by equality joins on IDs.
+Masking replaces every JSON string value in c that equals a (inputs, arguments, version-map keys) with a
+fresh placeholder unique to that relation, so the relation cannot be rebuilt by equality joins on IDs.
+IDs embedded inside longer strings (e.g. a free-text note) are not rewritten; generated notes never contain
+IDs, and the audit (`audit_ok`) fails if any occurrence of a survives anywhere in c.
 The same masked view is given to every selection method. Whole events are never removed.
 """
 from __future__ import annotations

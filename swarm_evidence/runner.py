@@ -178,7 +178,11 @@ UNCERTAIN_BILLING = ("APITimeoutError", "InternalServerError", "APIConnectionErr
 def execute(specs, monitor, store: Store, ceiling: float, stage_budget: float, concurrency: int = 6,
             max_attempts: int = 8, stop_at_utc: str | None = None, progress_every: int = 25, rpm: float = 40.0):
     """Run pending specs. Returns a summary dict with stop reasons."""
-    pending = [s for s in specs if not store.has(s["run_key"])]
+    pending, seen_keys = [], set()
+    for s in specs:  # de-duplicate run keys so a key is never sent twice in one stage
+        if s["run_key"] not in seen_keys and not store.has(s["run_key"]):
+            seen_keys.add(s["run_key"])
+            pending.append(s)
     stage = specs[0]["stage"] if specs else "?"
     start_spent = store.spent()
     reserved = {"v": 0.0}
@@ -246,7 +250,10 @@ def execute(specs, monitor, store: Store, ceiling: float, stage_budget: float, c
             if res is None:
                 row.update(status="transport_error", parse_error=last_err, cost=0.0)
             else:
-                parsed = parse_output(res["response_text"], s["shown_ids"])
+                try:
+                    parsed = parse_output(res["response_text"], s["shown_ids"])
+                except Exception as e:  # never lose a billed response to a parser crash
+                    parsed = {"valid": False, "error": f"parser_exception:{type(e).__name__}"}
                 row.update(status=res["status"], response_text=res["response_text"], parsed=json.dumps(parsed),
                            parse_error=parsed["error"], input_tokens=res["input_tokens"],
                            output_tokens=res["output_tokens"], reasoning_tokens=res["reasoning_tokens"],
