@@ -9,6 +9,9 @@ The protocol was frozen in commit `d27f932` (`protocol/PROTOCOL_FREEZE.json`, pr
 | 3 | `runner.execute` de-duplicates run keys within one stage. | Found by the test suite. The bug is unreachable through the CLI, because `plan_calls` already de-duplicates. | None. |
 | 4 | Corrected the `visibility.py` docstring: masking rewrites JSON string values equal to the artifact ID, not substrings inside free-text notes. | The old docstring overclaimed. | None. Generated notes never contain IDs, and the mask audit passes on all 138 trajectories in every condition. |
 | 5 | Added descriptive outputs to `analysis.py`: verdict counts by family and model-independent rule-monitor results by family. | Needed to explain the primary result. | These are additional descriptive tables, labelled as such. The pre-registered metrics are unchanged. |
+| 6 | **Exploratory:** a reasoning-enabled monitor variant (`qwen3.5-397b+reasoning`, reasoning effort "medium", output cap 4,096 tokens including billed reasoning), run on stage 1 (dependency and lexical at 2k). | Tests whether the judgment errors seen with reasoning disabled persist. Added after seeing stage-1 results. | Reported separately and labelled exploratory. It does not change any pre-registered result. |
+| 7 | **Exploratory:** a temperature-0 repeat of stage 1 (replicate 1). | Measures run-to-run variation. | Reported separately. Repeats are not new cases. |
+| 8 | **Exploratory:** a live-agent slice (`swarm_evidence/live.py`). Model-driven W2/W3 workers in the export domain, 12 seeds × {request, matched}, scored by the frozen monitor prompt. | The plan's conditional extension, to check behaviour beyond scripted violations. | Reported separately, with attempts, oracle-confirmed violations and detection counted apart. |
 
 ## Properties discovered after the freeze and left unchanged
 
