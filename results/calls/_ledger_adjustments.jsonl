@@ -1,0 +1,2 @@
+{"label": "preflight_access_checks", "cost": 0.0010419, "note": "6 access-check calls on 2026-11-08 (2 hosted-model checks, 4 reasoning-setting probes); sum of provider usage.cost", "created_at": "2026-11-08T18:03:50+00:00"}
+{"label": "killed_inflight_reservation", "cost": 0.002, "note": "Secondary-model chain stopped by SIGTERM at ~18:25Z after per-user rate limit was found to be shared; up to 3 in-flight gemma calls may have been billed without a recorded response. Conservative reservation (max cost per call < 0.0004).", "created_at": "2026-11-08T18:25:10+00:00"}
