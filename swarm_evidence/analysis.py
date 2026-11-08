@@ -180,7 +180,9 @@ def run_analysis(root: Path):
     cases = {c["run_id"]: c for c in load_jsonl(root / "data/manifest/cases.jsonl")}
     labels = {r["run_id"]: r for r in load_jsonl(root / "data/eval/labels.jsonl")}
     gold = {r: labels[r]["gold_event_ids"] for r in labels}
-    preds = predictions(calls)
+    all_preds = predictions([c for c in calls if c["arm"] != "live_worker"])
+    preds = [p for p in all_preds if p["run_id"] in cases]
+    live_preds = [p for p in all_preds if p["run_id"] not in cases]
     th = thresholds(preds, cases, labels)
     out_dir = root / "results/analysis"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -326,6 +328,8 @@ def run_analysis(root: Path):
                                  "gold_recall": statistics.mean(x["gold_recall"] for x in rs)}
             for (v, c, m, f), rs in sorted(pf.items()) if v == "full"}
 
+    summary["live_exploratory"] = live_summary(root, live_preds)
+
     # costs
     all_calls = calls
     cost_by_stage = defaultdict(float)
@@ -361,6 +365,54 @@ def run_analysis(root: Path):
         print("figures skipped:", e)
     print(f"analysis written: {out_dir.relative_to(root)} (calls exported: {n_exported}, predictions: {len(preds)})")
     return summary
+
+
+def live_summary(root: Path, live_preds):
+    """Exploratory live-agent slice: worker behaviour, oracle outcomes and monitor detection."""
+    meta_p = root / "data/live/meta.jsonl"
+    if not meta_p.exists():
+        return {}
+    from .rules_monitor import rule_monitor
+    from .selection import select
+    meta = load_jsonl(meta_p)
+    obs = {o["run_id"]: o for o in load_jsonl(root / "data/live/trajectories.jsonl")}
+    out = {"n_runs": len(meta), "completed": sum(m["completed"] for m in meta)}
+    for cond in ("request", "matched"):
+        ms = [m for m in meta if m["condition"] == cond]
+        done = [m for m in ms if m["completed"]]
+        out[cond] = {"n": len(ms), "completed": len(done),
+                     "w2_used_extra_table": sum(m.get("w2_used_extra", False) for m in done),
+                     "oracle_violations": sum(m.get("label", 0) for m in done),
+                     "notes_mention_extra": sum(m.get("w2_notes_mention_extra", False) for m in done),
+                     "invalid_actions": sum(m.get("invalid_actions", 0) for m in ms)}
+    lab = {m["run_id"]: m["label"] for m in meta if m["completed"]}
+    mon = {}
+    for p in live_preds:
+        if p["run_id"] not in lab:
+            continue
+        mon.setdefault(f"{p['model']}|{p['arm']}@{p['cap']}", []).append(p)
+    for k, ps in mon.items():
+        ys = [lab[p["run_id"]] for p in ps]
+        mon[k] = {"n": len(ps), "auroc": auroc([p["score"] for p in ps], ys),
+                  "violation_tp": sum(1 for p, y in zip(ps, ys) if p["verdict"] == "violation" and y),
+                  "violation_fp": sum(1 for p, y in zip(ps, ys) if p["verdict"] == "violation" and not y),
+                  "abstain": sum(1 for p in ps if p["verdict"] == "insufficient_evidence"),
+                  "invalid": sum(1 for p in ps if not p["valid"])}
+    out["monitors"] = mon
+    rule = {}
+    for arm in ("dependency", "lexical", "chronological"):
+        sc, ys = [], []
+        for rid, y in lab.items():
+            o = obs[rid]
+            by = {e["event_id"]: e for e in o["events"]}
+            c = select(arm, o, 2000)[0]
+            sc.append(rule_monitor([by[i] for i in c["event_ids"]], o["envelope"])["score"])
+            ys.append(y)
+        rule[f"{arm}@2000"] = auroc(sc, ys)
+    out["rule_monitor_auroc"] = rule
+    out["n_violations"] = sum(lab.values())
+    out["n_legit"] = len(lab) - sum(lab.values())
+    return out
 
 
 def _count(it):

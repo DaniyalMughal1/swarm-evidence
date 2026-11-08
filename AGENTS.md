@@ -9,7 +9,7 @@ This repository starts as a research handoff. Read `CLAUDE_HANDOFF.md`, `docs/PR
 - The user authorized a public repository on DaniyalMughal1. Never commit credentials, local account information, full third-party transcripts, or unlicensed datasets.
 - Use sponsor credits only. Verify the credited balance and rates before live calls. No auto-recharge, paid fallback, or full factorial launch without an explicit measured budget.
 - Validate this preparation pack: `python3 scripts/check_pack.py`.
-- After implementing the experiment, add meaningful offline tests and document the actual command here. Proposed command: `python3 -m unittest discover -s tests -v`. It is not an existing experiment test suite yet.
+- Offline tests (stdlib only, no network, ~6 s): `python3 -m unittest discover -s tests -v`. 179 tests; 4 `expectedFailure` tests pin documented gaps (see `protocol/POST_FREEZE_CHANGES.md`).
 - Offline checks should cover oracle correctness, leakage, selector budgets, corruption semantics, metric edge cases, and interrupted-run recovery. Live calls are opt-in and never run in ordinary CI.
 - A four-to-eight-page official-template report with required ethical appendix takes priority over an interface, deployment, or optional video.
 - Preserve failed runs, null results, all denominators, and stage stopping reasons. Mark exploratory changes after freezing.

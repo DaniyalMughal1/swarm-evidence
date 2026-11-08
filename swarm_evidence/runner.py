@@ -102,7 +102,7 @@ def view_hash(observed):
     return hashlib.sha256(json.dumps(observed, sort_keys=True).encode()).hexdigest()[:16]
 
 
-def plan_calls(stage, arms, caps, visibilities, run_ids, observed_by_id, model, replicate=0):
+def plan_calls(stage, arms, caps, visibilities, run_ids, observed_by_id, model, replicate=0, output_cap=None):
     """Deterministic call specs for a stage (selection happens here, before any model call)."""
     specs = []
     ph = prompt_hash()
@@ -129,7 +129,8 @@ def plan_calls(stage, arms, caps, visibilities, run_ids, observed_by_id, model, 
                             "view_hash": vh, "input_text": text,
                             "input_sha": hashlib.sha256(text.encode()).hexdigest()[:16],
                             "shown_ids": c["event_ids"], "est_input_tokens": est,
-                            "max_output_tokens": OUTPUT_CAP_ISOLATED if arm == "isolated" else OUTPUT_CAP_SINGLE,
+                            "max_output_tokens": output_cap or (OUTPUT_CAP_ISOLATED if arm == "isolated"
+                                                                else OUTPUT_CAP_SINGLE),
                             "mask_audit_ok": audit["audit_ok"],
                         })
                 if arm == "full":

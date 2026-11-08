@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import re
 import subprocess
 import sys
@@ -36,11 +37,18 @@ class Numbers:
     def __init__(self, summary):
         self.s = summary
         self.used = {}
+        self.missing = []
 
     def get(self, path):
         cur = self.s
-        for part in path.split("/"):
-            cur = cur[int(part)] if isinstance(cur, list) else cur[part]
+        try:
+            for part in path.split("/"):
+                cur = cur[int(part)] if isinstance(cur, list) else cur[part]
+        except (KeyError, IndexError, TypeError):
+            if os.environ.get("REPORT_DRAFT"):
+                self.missing.append(path)
+                return float("nan")
+            raise
         self.used[path] = round(cur, 3) if isinstance(cur, float) else cur
         return cur
 
@@ -105,15 +113,12 @@ def fill_front_matter(doc, title, authors, abstract):
             p.runs[0].text = title
     # author table: nested inside row 1
     cell = t0.rows[1].cells[0]
-    author_tbl = None
-    for nt in cell._element.iter(qn("w:tbl")):
-        if "Author name 1" in "".join(nt.itertext()):
-            author_tbl = nt
-            break
+    cands = [nt for nt in cell._element.iter(qn("w:tbl")) if "Author name 1" in "".join(nt.itertext())]
+    author_tbl = cands[-1]  # innermost table holding the author grid
     rows = author_tbl.findall(qn("w:tr"))
     n = len(authors)
     per_row = min(3, n)
-    width = 3000
+    width = 4600 if n == 1 else 3000
     grid = author_tbl.find(qn("w:tblGrid"))
     for g in list(grid):
         grid.remove(g)
@@ -134,9 +139,13 @@ def fill_front_matter(doc, title, authors, abstract):
         for ci in range(per_row):
             k = ri * per_row + ci
             tc = copy.deepcopy(proto)
-            tcw = tc.find(qn("w:tcPr")).find(qn("w:tcW"))
-            if tcw is not None:
-                tcw.set(qn("w:w"), str(width))
+            tcpr = tc.find(qn("w:tcPr"))
+            tcw = tcpr.find(qn("w:tcW"))
+            if tcw is None:
+                tcw = tcpr.makeelement(qn("w:tcW"), {})
+                tcpr.insert(0, tcw)
+            tcw.set(qn("w:w"), str(width))
+            tcw.set(qn("w:type"), "dxa")
             ts = list(tc.iter(qn("w:t")))
             name, aff = (authors[k] if k < n else ("", ""))
             ts[0].text = name
@@ -215,6 +224,19 @@ def add_table(doc, header, rows, caption, col_widths=None, size=7.5):
             _set_cell_text(t.rows[i + 1].cells[j], [str(v)], size=size)
     _borders(t)
     if col_widths:
+        t.autofit = False
+        grid = t._element.find(qn("w:tblGrid"))
+        for j, gc in enumerate(grid.findall(qn("w:gridCol"))):
+            gc.set(qn("w:w"), str(int(col_widths[j] * 1440)))
+        tblPr = t._element.find(qn("w:tblPr"))
+        tblW = tblPr.find(qn("w:tblW"))
+        if tblW is None:
+            tblW = tblPr.makeelement(qn("w:tblW"), {})
+            tblPr.append(tblW)
+        tblW.set(qn("w:w"), str(int(sum(col_widths) * 1440)))
+        tblW.set(qn("w:type"), "dxa")
+        layout = tblPr.makeelement(qn("w:tblLayout"), {qn("w:type"): "fixed"})
+        tblPr.append(layout)
         for row in t.rows:
             for j, w in enumerate(col_widths):
                 row.cells[j].width = Inches(w)
@@ -281,6 +303,8 @@ def main():
     import pymupdf
     d = pymupdf.open(str(OUT_PDF))
     ref_page = next((i + 1 for i in range(len(d)) if re.search(r"^\s*References\s*$", d[i].get_text(), re.M)), None)
+    if N.missing:
+        print("DRAFT: missing numbers:", len(N.missing), sorted(set(p.split("/")[0] + "/" + p.split("/")[1] if "/" in p else p for p in N.missing))[:12])
     print(json.dumps({"pdf": str(OUT_PDF.relative_to(ROOT)), "pages": len(d), "references_heading_page": ref_page,
                       "abstract_words": words, "numbers_used": len(N.used),
                       "pdf_mb": round(OUT_PDF.stat().st_size / 1e6, 2)}))

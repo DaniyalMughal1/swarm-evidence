@@ -1,0 +1,8 @@
+We used LLM assistance extensively, and we disclose it here. Before implementation, OpenAI Codex helped with source discovery, transcript extraction, research synthesis and the experimental plan. Claude (Anthropic; Claude Code with Claude Opus 5.5) did the following under the author's direction:
+- implemented the simulator, selection methods, monitors, runner, tests and analysis code;
+- executed every model run;
+- drafted this report's text, tables and figures.
+
+Claude subagents also wrote the offline test suite and checked reference metadata against arXiv, PMLR and Crossref records. The monitors under study, qwen3.5-397b and gemma-4-31b-it, were served by Adaption, and their outputs are the experimental data, not authoring assistance.
+
+All reported numbers are produced from saved run records by the released analysis code. An automated audit (python -m swarm_evidence audit-report) checks every number in the report against the regenerated summary. [AUTHOR TO CONFIRM: describe the human review actually performed before submission.]

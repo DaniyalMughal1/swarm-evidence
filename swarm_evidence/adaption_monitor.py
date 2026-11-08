@@ -25,6 +25,13 @@ PRICES = {
 MODEL_EXTRA = {
     "qwen3.5-397b": {"reasoning": {"effort": "none"}},
 }
+# Exploratory (post-freeze) monitor variants: label -> (provider model id, extra request body).
+# Billed reasoning tokens are part of output_tokens and therefore of the recorded cost.
+VARIANTS = {
+    "qwen3.5-397b+reasoning": ("qwen3.5-397b", {"reasoning": {"effort": "medium"}}),
+}
+for _label, (_base, _extra) in VARIANTS.items():
+    PRICES[_label] = PRICES[_base]
 
 
 def load_dotenv(path: str | Path = ".env") -> list:
@@ -106,15 +113,16 @@ class AdaptionMonitor:
         from adaption import Adaption  # imported lazily so offline tests need no SDK
 
         self.model = model
+        self.provider_model, self.extra = VARIANTS.get(model, (model, MODEL_EXTRA.get(model)))
         self.temperature = temperature
         self.client = Adaption(max_retries=0, timeout=timeout)
 
     def call(self, instructions: str, input_text: str, max_output_tokens: int) -> dict:
         """One transport attempt. Raises on transport errors so the runner can log/retry."""
         t0 = time.time()
-        r = self.client.responses.create(model=self.model, instructions=instructions, input=input_text,
+        r = self.client.responses.create(model=self.provider_model, instructions=instructions, input=input_text,
                                          max_output_tokens=max_output_tokens, temperature=self.temperature,
-                                         extra_body=MODEL_EXTRA.get(self.model) or None)
+                                         extra_body=self.extra or None)
         d = r.model_dump()
         usage = d.get("usage") or {}
         out_details = usage.get("output_tokens_details") or {}

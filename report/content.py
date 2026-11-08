@@ -91,15 +91,18 @@ def body(N):
         ("h2", "2. Related Work"),
         ("p", "**Control and multi-agent monitoring.** AI Control evaluates protocols that keep untrusted models "
               "useful while limiting harm, with trusted monitors as one component [1]; we study one input to such a "
-              "monitor and do not claim prevention. Multi-Agent AI Control shows that distributed attacks hamper "
-              "per-instance monitors and compares joint monitoring [3]. That joint context helps is therefore "
-              "known; our question is which evidence to include when the joint context is capped. Hammond et al. "
+              "monitor and do not claim prevention. Multi-Agent AI Control reports a fragmentation effect: the more agents "
+              "share an attack, the less per-agent monitors detect it [3]. That per-instance review misses "
+              "distributed attacks is therefore known; our question is which evidence a joint monitor should read "
+              "when its context is capped. Hammond et al. "
               "survey multi-agent risks including collusion [7], and Jones et al. show that combinations of "
               "individually safe models can be misused [6], which motivates composed violations."),
-        ("p", "**Lineage and graphs.** FlowReview (“Deny Without Disabling”) already studies authorization of "
-              "composed agent actions with trusted dependency recording and analyses incomplete usable lineage [2]. "
-              "GroupGuard monitors agent interaction graphs for coordinated manipulation [4], and NARCBench detects "
-              "multi-agent collusion from model internals [5]. Agent logging and provenance infrastructure is an "
+        ("p", "**Lineage and graphs.** Zhang et al. evaluate composed multi-agent information flows with "
+              "authorization-paired tests and propose FlowReview, which reviews composed artifacts with "
+              "deterministic enforcement; they argue that retaining information and lineage alone does not "
+              "guarantee correct permission attribution [2]. GroupGuard defends against group collusive attacks "
+              "with graph-based monitoring, honeypot inducement and structural pruning [4], and Rose et al. detect "
+              "collusion from activation probes on their NARCBench benchmark [5]. Agent logging and provenance infrastructure is an "
               "active area [8, 9]. We do not propose an enforcement architecture, an interaction-suspicion graph or "
               "white-box detection. Our increment is a controlled measurement of *context-budgeted evidence "
               "selection* over recorded artifact lineage against non-graph retrieval baselines (lexical, BM25 [11] "
@@ -107,102 +110,89 @@ def body(N):
               "separate retrieval quality from judgment. A targeted search found no study isolating this effect; "
               "that is not proof of priority."),
         ("h2", "3. Methods"),
-        ("h3", "3.1 Setting and threat model"),
-        ("p", "Three workers (W1 to W3) act through structured tools in a deterministic local simulator. A trusted "
-              "harness records every call as an event: event ID, worker, sequence number, tool, arguments, input and "
-              "output artifact IDs (opaque random strings), versions, policy references, outcome and a free-text "
-              "note written by the worker. Notes are untrusted and identical across matched twins. Each trajectory "
-              "ends with a finalization request naming a target artifact and proposed use; the same request occurs "
-              "in both twins, so the review trigger never reveals the violating step. Violating actions are "
-              "scripted, not emergent. The attacker controls actions and notes but cannot edit the ledger. The "
-              "monitor sees only the public policy, the request and the selected events: no labels, gold evidence "
-              "or hidden state."),
-        ("h3", "3.2 Domains, families and labels"),
-        ("p", "**Export permissions** (A1 to A4): a restricted source wired into an export merge; a steward's "
-              "revocation of a source that does or does not reach the export; deep fan-in; and a lookup join where "
-              "a restricted input is legitimate as the *reference* but not as the *primary* input. **Training "
-              "contamination** (B1 to B4): held-out records reaching a training mix through augmentation; a "
-              "deduplication filter that uses the held-out split as a reference (legitimate) or as the primary "
-              "input; a purpose-specific exception; and a two-hop shard cache. **Payment batches** (C1 to C4): "
-              "reversals, account scopes, and two families where an earlier released batch already paid the same "
-              "invoice. In C3 and C4 the decisive earlier payment consumes a shared ancestor but is not an ancestor "
-              "of the target; we declared them *out-of-lineage* before running any model."),
+        ("h3", "3.1 Setting, data and labels"),
+        ("p", "Three workers (W1 to W3) call structured tools in a deterministic local simulator. A trusted harness "
+              "records each call: event and artifact IDs (opaque random strings), worker, sequence, tool, arguments, "
+              "inputs, outputs, versions, policy references, outcome and a worker-written note (untrusted, "
+              "identical across twins). Each trajectory ends with a finalization request (target artifact, proposed "
+              "use) that occurs in both twins, so the trigger never reveals the violating step. Violations are "
+              "scripted, not emergent. The attacker controls actions and notes but not the ledger. The monitor sees "
+              "only the public policy, the request and the selected events: no labels, gold evidence or hidden state."),
+        ("p", "**Export permissions** (A1 to A4): a restricted source wired into an export; a revocation that does or "
+              "does not reach the export; deep fan-in; a lookup join where a restricted input is legitimate as "
+              "*reference* but not as *primary* input. **Training contamination** (B1 to B4): held-out records "
+              "reaching training through augmentation; a deduplication filter using the held-out split as reference "
+              "(legitimate) or primary input; a purpose-specific exception; a two-hop shard cache. **Payment "
+              "batches** (C1 to C4): reversals; account scopes; and two families where an earlier released batch "
+              "already paid the same invoice. In C3 and C4 that decisive payment shares an ancestor with the target "
+              "but is not one of its ancestors; we declared them *out-of-lineage* before any model call."),
         ("p", "Each family has 5 seeds. Every trajectory interleaves 16 to 32 chains of unrelated legitimate work "
-              "(restricted data used internally, held-out archives, gateway-rejected attempts, other released "
-              "batches), so held-out traces contain "
-              f"{N.i('dataset/min_events_test')} to {N.i('dataset/max_events_test')} events "
-              f"(mean {N.f('dataset/mean_events_test', 0)}), roughly 6,000 to 11,000 tokens. Relevant evidence "
-              "is spread through the log. Labels come from an oracle that reads only hidden state: record-level "
-              "provenance, permissions at finalization, held-out membership and exceptions, and paid amounts. "
-              "Matched twins share every event ID, tool, worker and the request; they differ only in wiring, an "
-              "authorization or an amount."),
-        ("p", "A **validity gate** checks each base case: opposite oracle labels; identical twin structure; a "
-              "deterministic rule monitor on the full ledger agrees with the oracle; a second legitimate completion "
-              "that changes a *different* worker, so every single-worker view of the violating trajectory is "
-              "shared by some legitimate trajectory; and a gold minimal evidence set (a 1-minimal event set on "
-              "which the rule monitor reproduces the label) that spans at least two workers. "
-              f"{N.i('dataset/gate_passed')} of {N.i('dataset/n_base_cases')} base cases pass. Families are split "
-              "before any model call: development (A1, A3, B1, B3, C1, C3; prompt design used A1/B1/C1 and "
-              "threshold calibration used A3/B3/C3) and held out (A2, A4, B2, B4, C2, C4)."),
-        ("h3", "3.3 Evidence selection under a cap"),
-        ("p", "All methods render events with the same compact JSON, display them chronologically, include only "
-              "complete events, and count the fixed overhead (instructions, policy, request) against the cap. "
-              "**Chronological** keeps the newest events. **Lexical** ranks events by 4×[contains target ID] plus "
-              "the number of distinct query tokens shared with the policy and request. **BM25** [11] and "
-              "**Lexical+PRF** (one round of pseudo-relevance feedback that adds every token, including artifact "
-              "IDs, of the top three events [12]) are stronger non-graph baselines, added on development data "
-              "before the freeze. **Dependency** runs a backward breadth-first traversal from the target over "
-              "producer-to-consumer relations; events with no outputs that reference a reached artifact "
-              "(licenses, revocations, reversals, exceptions) attach at that artifact's distance; ties go to the "
-              "most recent event, and spare budget is left unused. **Shuffled graph** runs the same traversal on a "
-              "node-relabelled copy of the graph (target producer fixed), so it selects as many events as "
-              "Dependency without real structure. **Isolated** makes three per-worker calls, each with a third "
-              "of the cap and its own repeated overhead, and takes the maximum score. **Full log** (no cap) is a "
-              "diagnostic ceiling. Caps are 2,000 and 6,000 tokens, estimated at 2.5 bytes per token. A first "
-              "development pilot with 3.0 bytes per token overran the cap by up to 11%, so we recalibrated before "
-              "freezing; no held-out call exceeded its cap (Table 1)."),
-        ("h3", "3.4 Monitors and protocol"),
-        ("p", "The primary LLM monitor is qwen3.5-397b on Adaption's hosted inference, at temperature 0 with "
-              "reasoning disabled so that the 384-token output cap (128 per isolated call) covers every generated "
-              "token. It returns JSON with a one-sentence reason, cited event IDs, a verdict (violation, benign, "
-              "insufficient_evidence) and a suspicion score. Parsing is strict; only first attempts are scored, and "
-              "invalid outputs receive score 0.5 and count as abstentions. gemma-4-31b-it with the identical prompt "
-              "is a second model family. The **rule monitor** is a deterministic program that knows the policy's "
-              "record-carrying semantics. It reports violation when the shown events contain a witness, benign "
-              "when the target's backward lineage is complete and shows no witness, and unknown otherwise. It is "
-              "optimistic about events it was not shown. Three prompt iterations on the 12 prompt-design "
-              "trajectories fixed truncated outputs and verdicts written before the reason, which prompt v3 "
-              "corrects by placing the reason first (Appendix B)."),
-        ("p", "The protocol was frozen and committed before any calibration or held-out call (prompt hash 0fade4df). "
-              "**Primary contrast:** AUROC(dependency) minus AUROC(lexical) at the 2,000-token cap with full "
-              "visibility on the 60 held-out trajectories, with a paired percentile bootstrap that resamples whole "
-              "template families (6 clusters, 10,000 draws). With six families this interval is descriptive, not a "
-              "population significance test. Secondary analyses: other arms, the 6,000-token cap, missing "
-              "dependency metadata, the second model, the rule monitor and single-worker controls. Missing "
-              "metadata masks randomly chosen producer-to-consumer relations (25% or 50%) or all cross-worker "
-              "bridges. Each masked artifact ID is replaced *everywhere* in the consuming event by a unique "
-              "placeholder; an audit confirms no equality join recovers it, and every method receives the same "
-              "masked view."),
+              "(restricted data used internally, held-out archives, gateway-rejected attempts, other paid batches), "
+              f"so held-out traces have {N.i('dataset/min_events_test')} to {N.i('dataset/max_events_test')} events "
+              f"(mean {N.f('dataset/mean_events_test', 0)}; about 6,000 to 11,000 tokens) with evidence spread "
+              "through the log. An oracle labels each trajectory from hidden state only (record-level provenance, "
+              "permissions at finalization, held-out membership, paid amounts). Twins share every event ID, tool, "
+              "worker and the request, and differ only in wiring, an authorization or an amount. A **validity gate** "
+              "requires, per base case: opposite labels; identical twin structure; agreement between the oracle and "
+              "a deterministic rule monitor reading the full ledger; a second legitimate completion that changes a "
+              "*different* worker, so every single-worker view of the violation is shared by a legitimate trajectory; "
+              "and a 1-minimal gold evidence set spanning at least two workers. "
+              f"{N.i('dataset/gate_passed')} of {N.i('dataset/n_base_cases')} base cases pass. The family split was "
+              "fixed before any model call: development A1, A3, B1, B3, C1, C3 (prompt design A1/B1/C1, threshold "
+              "calibration A3/B3/C3); held out A2, A4, B2, B4, C2, C4."),
+        ("h3", "3.2 Evidence selection under a cap"),
+        ("p", "All methods use identical compact JSON rendering in chronological order, include only complete "
+              "events, and count the fixed overhead (instructions, policy, request) against the cap. "
+              "**Chronological** keeps the newest events. **Lexical** ranks by 4\u00d7[contains target ID] plus the "
+              "number of distinct query tokens shared with the policy and request. **BM25** [11] and **Lexical+PRF** "
+              "(one round of pseudo-relevance feedback adding all tokens, including artifact IDs, of the top three "
+              "events [12]) are stronger non-graph baselines added on development data before the freeze. "
+              "**Dependency** runs a backward breadth-first traversal from the target over producer-to-consumer "
+              "relations; output-less events that reference a reached artifact (licenses, revocations, reversals, "
+              "exceptions) attach at its distance; ties go to recency; spare budget stays unused. **Shuffled graph** "
+              "traverses a node-relabelled copy of the graph, selecting as many events without real structure. "
+              "**Isolated** makes one call per worker with a third of the cap each and takes the maximum score; at "
+              "2,000 tokens its repeated overhead alone exceeds that share, so it shows no events (we kept this frozen "
+              "accounting). **Full log** (no cap) is a diagnostic ceiling. Caps are 2,000 and 6,000 tokens, "
+              "estimated at 2.5 bytes per token after a development pilot at 3.0 overran by up to 11%."),
+        ("h3", "3.3 Monitors and protocol"),
+        ("p", "The primary monitor is qwen3.5-397b on Adaption hosted inference (temperature 0, reasoning disabled so "
+              "the 384-token output cap, 128 per isolated call, covers every generated token). It returns JSON with a "
+              "one-sentence reason, cited event IDs, a verdict (violation, benign, insufficient_evidence) and a "
+              "suspicion score. Parsing is strict; only first attempts count; invalid outputs score 0.5 and count as "
+              "abstentions. gemma-4-31b-it with the same prompt is the second model family. The **rule monitor** is "
+              "a deterministic program that knows the policy's record-carrying rules: violation if the shown events "
+              "contain a witness, benign if the target's backward lineage is complete without one, else unknown "
+              "(optimistic about unseen events). Three prompt iterations on the 12 prompt-design trajectories fixed "
+              "truncated outputs and verdicts written before the reason (Appendix B)."),
+        ("p", "The protocol was committed before any calibration or held-out call (prompt hash 0fade4df). **Primary "
+              "contrast:** AUROC(dependency) minus AUROC(lexical) at 2,000 tokens with full visibility on the 60 "
+              "held-out trajectories, with a paired percentile bootstrap over whole template families (6 clusters, "
+              "10,000 draws). With six families the interval is descriptive, not a population test. Secondary: other "
+              "arms, the 6,000-token cap, missing metadata, the second model, the rule monitor and the controls. "
+              "Missing metadata masks random producer-to-consumer relations (25% or 50%) or every cross-worker "
+              "bridge, replacing the artifact ID wherever it appears in the consuming event with a unique "
+              "placeholder; an audit confirms no ID join recovers it, and all methods see the same masked view."),
     ]
     # ---------------- Results
+    def cia(a):
+        lo, hi = N.get(a + "/auroc_ci_family/0"), N.get(a + "/auroc_ci_family/1")
+        return f"{N.f(a + '/auroc')} ({lo:.2f}\u2013{hi:.2f})"
+
     rows = []
     for arm, label in [("dependency", "Dependency"), ("lexical", "Lexical"), ("chronological", "Chronological"),
                        ("bm25", "BM25"), ("lexical_prf", "Lexical+PRF"), ("shuffled", "Shuffled graph"),
                        ("isolated", "Isolated (3 calls)")]:
-        r = [label]
-        for cap in (2000, 6000):
-            a = f"{Q}/arms/{arm}@{cap}"
-            r += [f"{N.f(a + '/auroc')} {ci(N, a + '/auroc_ci_family')}",
-                  f"{N.i(a + '/verdict_violation_tp')}/{N.i(a + '/verdict_violation_fp')}",
-                  N.i(a + "/abstain_valid"),
-                  N.f(a + "/gold_recall"),
-                  f"{N.get(a + '/mean_input_tokens'):.0f}",
-                  N.f(f"offline_test/{arm}@{cap}@full/rule_auroc")]
-        rows.append(r)
+        a2, a6 = f"{Q}/arms/{arm}@2000", f"{Q}/arms/{arm}@6000"
+        rows.append([label, cia(a2), f"{N.i(a2 + '/verdict_violation_tp')}/{N.i(a2 + '/verdict_violation_fp')}",
+                     N.i(a2 + "/abstain_valid"), N.f(a2 + "/gold_recall"), f"{N.get(a2 + '/mean_input_tokens'):.0f}",
+                     N.f(f"offline_test/{arm}@2000@full/rule_auroc"),
+                     cia(a6), f"{N.i(a6 + '/verdict_violation_tp')}/{N.i(a6 + '/verdict_violation_fp')}",
+                     N.f(a6 + "/gold_recall"), N.f(f"offline_test/{arm}@6000@full/rule_auroc")])
     fa = f"{Q}/arms/full@nocap"
-    rows.append(["Full log (no cap)", f"{N.f(fa + '/auroc')} {ci(N, fa + '/auroc_ci_family')}",
-                 f"{N.i(fa + '/verdict_violation_tp')}/{N.i(fa + '/verdict_violation_fp')}", N.i(fa + "/abstain_valid"),
-                 N.f(fa + "/gold_recall"), f"{N.get(fa + '/mean_input_tokens'):.0f}", "1.00", "", "", "", "", "", ""])
+    rows.append(["Full log (no cap)", cia(fa), f"{N.i(fa + '/verdict_violation_tp')}/{N.i(fa + '/verdict_violation_fp')}",
+                 N.i(fa + "/abstain_valid"), N.f(fa + "/gold_recall"), f"{N.get(fa + '/mean_input_tokens'):.0f}",
+                 "1.00", "", "", "", ""])
     overruns = sum(N.get(f"{Q}/arms/{arm}@{cap}/cap_overruns") for arm in
                    ("dependency", "lexical", "chronological", "bm25", "lexical_prf", "shuffled", "isolated")
                    for cap in (2000, 6000))
@@ -235,15 +225,15 @@ def body(N):
               f"{N.i(dep2 + '/verdict_violation_fp')} false violation verdicts on the 30 legitimate twins. Across "
               f"all budgeted held-out calls, {overruns} exceeded their cap and {invalid} outputs were invalid."),
         ("table",
-         ["Method", "AUROC 2k [95% CI]", "TP/FP 2k", "Abst. 2k", "Recall 2k", "Tok. 2k", "Rule 2k",
-          "AUROC 6k [95% CI]", "TP/FP 6k", "Abst. 6k", "Recall 6k", "Tok. 6k", "Rule 6k"],
+         ["Method", "AUROC 2k (95% CI)", "TP/FP", "Abst.", "Recall", "Tokens", "Rule",
+          "AUROC 6k (95% CI)", "TP/FP", "Recall", "Rule"],
          rows,
-         "**Table 1.** Held-out results for the primary monitor (qwen3.5-397b), 60 trajectories (30 violating, 30 "
-         "legitimate) from 6 unseen families. AUROC intervals resample families. TP/FP: violation verdicts on "
-         "violating/legitimate trajectories. Abst.: valid insufficient-evidence verdicts. Recall: share of gold "
-         "minimal evidence shown. Tok.: mean provider-billed input tokens. Rule: AUROC of the deterministic rule "
-         "monitor on the same selected evidence (model-independent).",
-         {"size": 6.5}),
+         "**Table 1.** Held-out results for the primary monitor (qwen3.5-397b): 60 trajectories (30 violating, 30 "
+         "legitimate) from 6 unseen families, at 2,000- and 6,000-token caps. AUROC intervals resample families. "
+         "TP/FP: violation verdicts on violating/legitimate trajectories. Abst.: valid insufficient-evidence "
+         "verdicts. Recall: share of gold minimal evidence shown. Tokens: mean provider-billed input tokens. Rule: "
+         "AUROC of the deterministic rule monitor on the same selected evidence (model-independent).",
+         {"size": 7, "col_widths": [0.95, 0.95, 0.4, 0.38, 0.45, 0.45, 0.38, 0.95, 0.4, 0.45, 0.38]}),
         ("fig", "figures/fig2_auroc_by_method.png", 6.5,
          "**Figure 2.** Held-out AUROC by selection method at two input caps (LLM monitor qwen3.5-397b; error bars: "
          "95% family-bootstrap intervals over 6 held-out families; dashed line: chance; grey line: full log with "
@@ -277,7 +267,8 @@ def body(N):
                    "Legit flagged", "Viol. missed", "Lex. LLM AUROC"], fam_rows,
          "**Table 2.** Per-family held-out results at the 2,000-token cap (5 pairs per family). Legit flagged: "
          "legitimate twins given a violation verdict by the LLM with dependency evidence. Viol. missed: violating "
-         "trajectories judged benign or abstained. Rule AUROC and recall are model-independent.", {"size": 7}),
+         "trajectories judged benign or abstained. Rule AUROC and recall are model-independent.",
+         {"size": 7, "col_widths": [0.45, 1.55, 0.7, 0.7, 0.6, 0.65, 0.65, 0.7]}),
         ("p", "**Out-of-lineage boundary (pre-registered H2).** In C4 the decisive evidence is an earlier released "
               "batch that paid part of the same invoice; it shares an ancestor with the target but is not one of "
               "its ancestors. Dependency selection never retrieved it. The LLM judged all "

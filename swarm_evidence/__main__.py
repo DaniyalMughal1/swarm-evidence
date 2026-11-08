@@ -101,7 +101,8 @@ def cmd_run(args):
     stage_name = args.stage if model == os.environ.get("ADAPTION_MODEL") and not args.tag else f"{args.stage}{args.tag or ''}"
     specs = []
     for rep in range(args.replicates):
-        specs += plan_calls(stage_name, arms, caps, vis, run_ids, obs, model, replicate=rep)
+        specs += plan_calls(stage_name, arms, caps, vis, run_ids, obs, model, replicate=rep,
+                            output_cap=args.max_output_tokens)
     if not all(s["mask_audit_ok"] for s in specs):
         print("refusing: visibility mask audit failed")
         return 2
@@ -118,6 +119,29 @@ def cmd_run(args):
     summary = execute(specs, mon, store, ceiling=ceiling, stage_budget=args.stage_budget,
                       concurrency=args.concurrency, stop_at_utc=args.stop_at_utc, rpm=args.rpm)
     print(json.dumps(summary, indent=1))
+    return 0
+
+
+def cmd_live(args):
+    """Exploratory live-agent slice: run model-driven workers, then score the logs with the frozen monitor."""
+    from .adaption_monitor import AdaptionMonitor, load_dotenv
+    from .dataset import load_jsonl
+    from .runner import Store, execute, plan_calls
+    load_dotenv(ROOT / ".env")
+    ceiling = float(os.environ.get("SWARM_MAX_CREDITS", "0") or 0)
+    if ceiling <= 0:
+        print("SWARM_MAX_CREDITS must be set")
+        return 2
+    if not args.monitor_only:
+        from .live import run_live
+        run_live(ROOT, args.seeds, ceiling)
+    obs = {o["run_id"]: o for o in load_jsonl(ROOT / "data/live/trajectories.jsonl")}
+    model = args.model or os.environ.get("ADAPTION_MODEL")
+    specs = plan_calls("live_monitor", args.arms.split(","), [int(c) for c in args.caps.split(",")], ["full"],
+                       sorted(obs), obs, model)
+    store = Store(ROOT / "results/runs.sqlite")
+    print(json.dumps(execute(specs, AdaptionMonitor(model), store, ceiling=ceiling, stage_budget=args.stage_budget,
+                             concurrency=3, rpm=args.rpm), indent=1))
     return 0
 
 
@@ -155,15 +179,25 @@ def main(argv=None):
     r.add_argument("--replicates", type=int, default=1)
     r.add_argument("--concurrency", type=int, default=6)
     r.add_argument("--rpm", type=float, default=40.0)
+    r.add_argument("--max-output-tokens", type=int, default=None,
+                   help="exploratory override of the frozen output cap (recorded per call)")
     r.add_argument("--tag", default="")
     r.add_argument("--stop-at-utc", default=None)
     r.add_argument("--dry-run", action="store_true")
     r.add_argument("--allow-unfrozen", action="store_true")
+    lv = sub.add_parser("live")
+    lv.add_argument("--seeds", type=int, default=12)
+    lv.add_argument("--arms", default="dependency,lexical,chronological")
+    lv.add_argument("--caps", default="2000")
+    lv.add_argument("--model", default="")
+    lv.add_argument("--stage-budget", type=float, default=5.0)
+    lv.add_argument("--rpm", type=float, default=20.0)
+    lv.add_argument("--monitor-only", action="store_true")
     sub.add_parser("analyze")
     sub.add_parser("audit-report")
     a = p.parse_args(argv)
     fn = {"generate": cmd_generate, "validate": cmd_validate, "offline": cmd_offline, "freeze": cmd_freeze,
-          "run": cmd_run, "analyze": cmd_analyze, "audit-report": cmd_audit_report}[a.cmd]
+          "run": cmd_run, "live": cmd_live, "analyze": cmd_analyze, "audit-report": cmd_audit_report}[a.cmd]
     return fn(a)
 
 

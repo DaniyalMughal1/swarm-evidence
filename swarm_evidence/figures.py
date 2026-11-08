@@ -111,16 +111,14 @@ def fig_main(summary, model, out: Path):
     plt.close(fig)
 
 
-def fig_recall_curve(root: Path, out: Path):
-    """Figure 3a: model-independent gold-evidence recall versus cap on held-out trajectories."""
+def _recall_panel(root: Path, ax):
+    """Model-independent gold-evidence recall versus cap on held-out trajectories."""
     obs = {o["run_id"]: o for o in load_jsonl(root / "data/observed/trajectories.jsonl")}
     cases = {c["run_id"]: c for c in load_jsonl(root / "data/manifest/cases.jsonl")}
     labels = {r["run_id"]: r for r in load_jsonl(root / "data/eval/labels.jsonl")}
     ids = sorted(r for r, c in cases.items() if c["subset"] == "test")
     caps = [1000, 2000, 3000, 4000, 6000, 8000, 10000]
-    arms = ["dependency", "lexical", "chronological", "bm25", "isolated"]
-    fig, ax = plt.subplots(figsize=(3.5, 2.6))
-    for arm in arms:
+    for arm in ["dependency", "lexical", "chronological", "bm25", "isolated"]:
         ys = []
         for cap in caps:
             rec = []
@@ -129,49 +127,52 @@ def fig_recall_curve(root: Path, out: Path):
                 g = set(labels[r]["gold_event_ids"])
                 rec.append(len(sel & g) / len(g))
             ys.append(statistics.mean(rec))
-        ax.plot(caps, ys, color=COLORS[arm], lw=2, marker="o", ms=3.5, label=ARM_LABEL[arm].replace(" (3 calls)", ""))
-    ax.axvline(2000, color=INK2, lw=0.5, ls=(0, (2, 2)))
-    ax.axvline(6000, color=INK2, lw=0.5, ls=(0, (2, 2)))
+        ax.plot(caps, ys, color=COLORS[arm], lw=2, marker="o", ms=3, label=ARM_LABEL[arm].replace(" (3 calls)", ""))
+    for c in (2000, 6000):
+        ax.axvline(c, color=INK2, lw=0.5, ls=(0, (2, 2)))
     ax.set_xlabel("input cap (estimated tokens)")
     ax.set_ylabel("gold-evidence recall")
     ax.set_ylim(0, 1.03)
     ax.set_xticks([2000, 4000, 6000, 8000, 10000])
     ax.set_xticklabels(["2k", "4k", "6k", "8k", "10k"])
     _style(ax)
-    ax.legend(frameon=False, fontsize=6.5, loc="lower right")
-    fig.subplots_adjust(left=0.17, right=0.97, top=0.96, bottom=0.18)
-    fig.savefig(out)
-    plt.close(fig)
+    ax.legend(frameon=False, fontsize=6, loc="lower right", handlelength=1.2)
+    ax.set_title("(a) evidence kept vs. cap", fontsize=8, color=INK, loc="left")
 
 
-def fig_visibility(summary, model, out: Path):
-    """Figure 3b: AUROC under missing dependency metadata (dependency vs lexical)."""
-    m = summary["models"].get(model)
-    if not m or not m.get("visibility"):
-        return
+def _visibility_panel(summary, model, ax, cap, title):
+    m = summary["models"][model]
     conds = ["full", "random25", "random50", "bridges"]
-    names = ["full", "25% rand.", "50% rand.", "bridges"]
-    fig, axes = plt.subplots(1, 2, figsize=(3.7, 2.6), sharey=True)
-    for ax, cap in zip(axes, (2000, 6000)):
-        for j, arm in enumerate(("dependency", "lexical")):
-            xs, hs = [], []
-            for i, c in enumerate(conds):
-                v = m["visibility"].get(f"{arm}@{cap}@{c}")
-                if v:
-                    xs.append(i + (j - 0.5) * 0.38)
-                    hs.append(v["auroc"])
-            ax.bar(xs, hs, width=0.36, color=COLORS[arm], label=ARM_LABEL[arm], zorder=3)
-            for x, h in zip(xs, hs):
-                ax.text(x, h + 0.015, f"{h:.2f}", ha="center", fontsize=5.5, color=INK, rotation=90, va="bottom")
-        ax.axhline(0.5, color=INK2, lw=0.7, ls=(0, (3, 2)))
-        ax.set_xticks(range(len(conds)))
-        ax.set_xticklabels(names, rotation=35, fontsize=6.5, ha="right")
-        ax.set_title(f"{cap // 1000}k cap", fontsize=8)
-        ax.set_ylim(0, 1.18)
-        _style(ax)
-    axes[0].set_ylabel("held-out AUROC")
-    axes[0].legend(frameon=False, fontsize=6.5, loc="upper right", bbox_to_anchor=(1.0, 1.0))
-    fig.subplots_adjust(left=0.16, right=0.99, top=0.9, bottom=0.27, wspace=0.08)
+    names = ["full", "25%", "50%", "bridges"]
+    for j, arm in enumerate(("dependency", "lexical")):
+        xs, hs = [], []
+        for i, c in enumerate(conds):
+            v = m["visibility"].get(f"{arm}@{cap}@{c}")
+            if v:
+                xs.append(i + (j - 0.5) * 0.38)
+                hs.append(v["auroc"])
+        ax.bar(xs, hs, width=0.36, color=COLORS[arm], label=ARM_LABEL[arm], zorder=3)
+        for x, h in zip(xs, hs):
+            ax.text(x, h + 0.015, f"{h:.2f}", ha="center", va="bottom", fontsize=5.5, color=INK)
+    ax.axhline(0.5, color=INK2, lw=0.7, ls=(0, (3, 2)))
+    ax.set_xticks(range(len(conds)))
+    ax.set_xticklabels(names, fontsize=6.5)
+    ax.set_xlabel("dependency relations masked")
+    ax.set_ylim(0, 1.08)
+    ax.set_title(title, fontsize=8, color=INK, loc="left")
+    _style(ax)
+
+
+def fig_budget_and_metadata(root: Path, summary, model, out: Path):
+    m = summary["models"].get(model)
+    fig, axes = plt.subplots(1, 3, figsize=(7.2, 2.5), gridspec_kw={"width_ratios": [1.25, 1, 1]})
+    _recall_panel(root, axes[0])
+    if m and m.get("visibility"):
+        _visibility_panel(summary, model, axes[1], 2000, "(b) AUROC, 2k cap")
+        _visibility_panel(summary, model, axes[2], 6000, "(c) AUROC, 6k cap")
+        axes[1].set_ylabel("held-out AUROC")
+        axes[2].legend(frameon=False, fontsize=6, loc="upper right")
+    fig.subplots_adjust(left=0.07, right=0.995, top=0.9, bottom=0.18, wspace=0.32)
     fig.savefig(out)
     plt.close(fig)
 
@@ -184,5 +185,4 @@ def make_all(root: Path, summary, preds, cases, labels):
     fig_main(summary, PRIMARY_MODEL, fd / "fig2_auroc_by_method.png")
     if SECONDARY_MODEL in summary["models"]:
         fig_main(summary, SECONDARY_MODEL, fd / "figS1_auroc_by_method_secondary.png")
-    fig_recall_curve(root, fd / "fig3a_recall_vs_cap.png")
-    fig_visibility(summary, PRIMARY_MODEL, fd / "fig3b_missing_metadata.png")
+    fig_budget_and_metadata(root, summary, PRIMARY_MODEL, fd / "fig3_budget_and_metadata.png")
