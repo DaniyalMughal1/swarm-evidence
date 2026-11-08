@@ -160,8 +160,10 @@ def body(N):
               "requires, per base case: opposite labels; identical twin structure; agreement between the oracle and "
               "a deterministic rule monitor reading the full ledger; a second legitimate completion that changes a "
               "*different* worker, so every single-worker view of the violation is shared by a legitimate trajectory; "
-              "and a 1-minimal gold evidence set spanning at least two workers (the last two are waived for the "
-              f"single-worker controls). {N.i('dataset/gate_passed')} of {N.i('dataset/n_base_cases')} base cases pass. The family split was "
+              "and gold evidence spanning at least two workers (the last two are waived for the single-worker "
+              "controls). Gold evidence is one deletion-minimal event set on which the rule monitor retains the "
+              "oracle label; recall measures coverage of that chosen witness, and alternative sufficient evidence sets "
+              f"may exist. {N.i('dataset/gate_passed')} of {N.i('dataset/n_base_cases')} base cases pass. The family split was "
               "fixed before any model call: development A1, A3, B1, B3, C1, C3 (prompt design A1/B1/C1, threshold "
               "calibration A3/B3/C3); held out A2, A4, B2, B4, C2, C4."),
         ("h3", "3.2 Evidence selection under a cap"),
@@ -209,24 +211,8 @@ def body(N):
               "contain IDs; an audit confirms no ID join recovers a masked link, and all methods see the same view."),
     ]
     # ---------------- Results
-    def cia(a):
-        lo, hi = N.get(a + "/auroc_ci_family/0"), N.get(a + "/auroc_ci_family/1")
-        return f"{N.f(a + '/auroc')} ({lo:.2f}\u2013{hi:.2f})"
-
-    rows = []
-    for arm, label in [("dependency", "Dependency"), ("lexical", "Lexical"), ("chronological", "Chronological"),
-                       ("bm25", "BM25"), ("lexical_prf", "Lexical+PRF"), ("shuffled", "Shuffled graph"),
-                       ("isolated", "Isolated (3 calls)")]:
-        a2, a6 = f"{Q}/arms/{arm}@2000", f"{Q}/arms/{arm}@6000"
-        rows.append([label, cia(a2), f"{N.i(a2 + '/verdict_violation_tp')}/{N.i(a2 + '/verdict_violation_fp')}",
-                     N.i(a2 + "/abstain_valid"), N.f(a2 + "/gold_recall"), f"{N.get(a2 + '/mean_input_tokens'):.0f}",
-                     N.f(f"offline_test/{arm}@2000@full/rule_auroc"),
-                     cia(a6), f"{N.i(a6 + '/verdict_violation_tp')}/{N.i(a6 + '/verdict_violation_fp')}",
-                     N.f(a6 + "/gold_recall"), N.f(f"offline_test/{arm}@6000@full/rule_auroc")])
+    rows = arm_rows(N, Q, 2000)
     fa = f"{Q}/arms/full@nocap"
-    rows.append(["Full log (no cap)", cia(fa), f"{N.i(fa + '/verdict_violation_tp')}/{N.i(fa + '/verdict_violation_fp')}",
-                 N.i(fa + "/abstain_valid"), N.f(fa + "/gold_recall"), f"{N.get(fa + '/mean_input_tokens'):.0f}",
-                 "1.00", "", "", "", ""])
     overruns = sum(N.get(f"{Q}/arms/{arm}@2000/cap_overruns") for arm in BUDGETED)
     invalid = sum(N.get(f"{Q}/arms/{arm}@2000/invalid") for arm in BUDGETED) + N.get(fa + "/invalid")
 
@@ -252,14 +238,12 @@ def body(N):
               + (", and no output (including the full log's) was invalid." if invalid == 0
                  else f", and {invalid} outputs (including the full log's) were invalid.")),
         ("table",
-         ["Method", "AUROC 2k (CI)", "TP/FP", "Abst.", "Recall", "Tokens", "Rule",
-          "AUROC 6k (CI)", "TP/FP", "Recall", "Rule"],
-         rows,
-         "**Table 1.** Held-out results, qwen3.5-397b (60 trajectories, 6 unseen families; CI: 95% family bootstrap). "
-         "TP/FP: violation verdicts on violating/legitimate runs; Abst.: insufficient evidence; Recall: gold evidence "
-         "shown; Tokens: mean billed input; Rule: rule-monitor AUROC on the same evidence (1.00 on the full log by the "
-         "validity gate).",
-         {"size": 7, "col_widths": [0.92, 0.98, 0.48, 0.44, 0.47, 0.5, 0.4, 0.98, 0.48, 0.47, 0.4]}),
+         TABLE_HEAD, rows,
+         "**Table 1.** Held-out results at the 2,000-token cap, qwen3.5-397b (60 trajectories, 6 unseen families). "
+         "CI: 95% family bootstrap; TP/FP: violation verdicts on violating/legitimate runs; Abst.: insufficient "
+         "evidence; Inv.: invalid predictions; Recall: gold evidence shown; Tokens: mean billed input; Rule: "
+         "rule-monitor AUROC on the same evidence (1.00 on the full log by the validity gate).",
+         {"size": 8, "col_widths": TABLE_WIDTHS}),
         ("p", "**More context did not help Qwen.** Reading the whole log without a cap (mean "
               f"{N.get(fa + '/mean_input_tokens'):.0f} billed input tokens, "
               f"{N.get(fa + '/mean_input_tokens') / N.get(dep2 + '/mean_input_tokens'):.1f}× the dependency arm) "
@@ -313,7 +297,7 @@ def body(N):
          "**Table 2.** Per-family held-out results at 2,000 tokens (5 pairs each). Legit flagged / Viol. missed: "
          "legitimate twins given a violation verdict / violations judged benign or abstained, by the LLM "
          "(qwen3.5-397b) with dependency evidence. Rule AUROC and recall are model-independent.",
-         {"size": 7, "col_widths": [0.52, 1.5, 0.68, 0.68, 0.6, 0.65, 0.65, 0.68]}),
+         {"size": 8, "col_widths": [0.55, 1.75, 0.7, 0.7, 0.6, 0.65, 0.65, 0.7]}),
         ("p", "**Out-of-lineage boundary (pre-registered H2).** In C4 the decisive evidence, an earlier released "
               "batch that paid part of the same invoice, is not an ancestor of the target, and dependency selection "
               "never retrieved it. The LLM judged all "
@@ -342,13 +326,7 @@ def body(N):
     b += [
         ("h3", "4.4 Second model, controls and cost"),
         ("p", second_model_sentence(N) +
-              "On the 9 single-worker control pairs, Qwen scored "
-              f"{N.f(Q + '/controls/dependency/auroc')} (dependency), {N.f(Q + '/controls/lexical/auroc')} (lexical), "
-              f"{N.f(Q + '/controls/chronological/auroc')} (chronological) and {N.f(Q + '/controls/full/auroc')} (full log); isolated review shows no events at this cap "
-              f"({N.f(Q + '/controls/isolated/auroc')}), so the controls do not test it. Total spend, including pilots "
-              f"and reserved in-flight calls, was {N.f('costs/total_credits', 2)} Adaption credits for "
-              f"{N.i('costs/n_calls_total')} recorded calls. "
-              + exploratory_pointer(N)),
+              "Single-worker controls are in Appendix D and costs in Appendix B. " + exploratory_pointer(N)),
     ]
     # ---------------- Discussion
     q_role = role_fp(N, Q)
@@ -363,8 +341,7 @@ def body(N):
                  "not to LLM monitors in general: lineage selection supplies the right evidence, and the judge "
                  "decides whether it is used. "
                  if gemma_ready(N) and role_fp(N, G) == 0 else "")
-              + "Where the policy is explicit, a deterministic check over the selected lineage can decide, "
-              "with an LLM reserved for semantics the schema cannot express. Lineage selection also has predictable "
+              + "Lineage selection also has predictable "
               "blind spots (aggregate constraints over sibling consumers, missing metadata), so a deployed monitor "
               "needs a fallback for those cases, such as sibling expansion; lexical retrieval did not rescue C4."),
         ("p", hypotheses_paragraph(N)),
@@ -376,7 +353,7 @@ def body(N):
               + live_limitation(N) + " Appendix A lists further limitations, including four known gaps pinned by "
               "tests."),
         ("p", "**Future work.** Sibling-consumer expansion, hybrid checker-plus-LLM monitors, live-worker logs, more "
-              "families, and adversaries who attack the recorder or launder lineage off the ledger."),
+              "families, and recorder-tampering adversaries."),
         ("h2", "6. Conclusion"),
         ("p", "At a fixed context budget, selecting evidence through recorded artifact dependencies retained "
               f"{N.pct(dep2 + '/gold_recall')} of decisive cross-agent evidence where lexical retrieval retained "
@@ -441,6 +418,33 @@ def moved(a, b, nd=2):
 NON_GRAPH = ("lexical", "chronological", "bm25", "lexical_prf")
 
 
+TABLE_HEAD = ["Method", "AUROC (95% CI)", "TP/FP", "Abst.", "Inv.", "Recall", "Tokens", "Rule"]
+TABLE_WIDTHS = [1.55, 1.15, 0.55, 0.5, 0.45, 0.6, 0.6, 0.55]
+ARM_LABELS = [("dependency", "Dependency"), ("lexical", "Lexical"), ("chronological", "Chronological"),
+              ("bm25", "BM25"), ("lexical_prf", "Lexical+PRF"), ("shuffled", "Shuffled graph"),
+              ("isolated", "Isolated (3 calls)")]
+
+
+def arm_rows(N, M, cap):
+    def cia(a):
+        lo, hi = N.get(a + "/auroc_ci_family/0"), N.get(a + "/auroc_ci_family/1")
+        return f"{N.f(a + '/auroc')} ({lo:.2f}\u2013{hi:.2f})"
+    rows = []
+    for arm, label in ARM_LABELS:
+        a = f"{M}/arms/{arm}@{cap}"
+        if arm == "isolated" and cap == 2000:
+            label = "Isolated (no events)"
+        rows.append([label, cia(a), f"{N.i(a + '/verdict_violation_tp')}/{N.i(a + '/verdict_violation_fp')}",
+                     N.i(a + "/abstain_valid"), N.i(a + "/invalid"), N.f(a + "/gold_recall"),
+                     f"{N.get(a + '/mean_input_tokens'):.0f}", N.f(f"offline_test/{arm}@{cap}@full/rule_auroc")])
+    if cap == 2000:
+        fa = f"{M}/arms/full@nocap"
+        rows.append(["Full log (no cap)", cia(fa), f"{N.i(fa + '/verdict_violation_tp')}/{N.i(fa + '/verdict_violation_fp')}",
+                     N.i(fa + "/abstain_valid"), N.i(fa + "/invalid"), N.f(fa + "/gold_recall"),
+                     f"{N.get(fa + '/mean_input_tokens'):.0f}", "1.00"])
+    return rows
+
+
 def join(items):
     items = list(items)
     return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
@@ -471,7 +475,7 @@ def budget_paragraph(N):
     txt += (f"More evidence did not help the LLM: with lexical retrieval its AUROC "
             f"{moved(N.get(l2 + '/auroc'), N.get(l6 + '/auroc'))}, as abstentions ({N.i(l2 + '/abstain_valid')} to "
             f"{N.i(l6 + '/abstain_valid')}) gave way to false alarms on {N.i(l6 + '/verdict_violation_fp')} of 30 "
-            f"legitimate twins (Table 1). The dependency-minus-lexical difference was {sg(d6)} "
+            f"legitimate twins (Table 3, Appendix D). The dependency-minus-lexical difference was {sg(d6)} "
             f"{ci(N, dl6 + '/ci95_family_bootstrap')} at 6,000 tokens against {sg(d2)} at 2,000. ")
     sp = h3_split(N)
     shrank = [b for b, (a2, a6) in sp.items() if a6 < a2]
@@ -485,7 +489,7 @@ def budget_paragraph(N):
     over = sum(N.get(f"{Q}/arms/{a}@6000/cap_overruns") for a in BUDGETED)
     inv = sum(N.get(f"{Q}/arms/{a}@6000/invalid") for a in BUDGETED)
     if over or inv:
-        txt += (f"At this cap {over} calls slightly exceeded the cap and {inv} outputs were invalid "
+        txt += (f"At this cap {over} calls slightly exceeded the cap and {inv} case-level predictions were invalid "
                 "(details in Appendix D).")
     return txt
 
@@ -505,8 +509,10 @@ def cap6k_details(N):
         txt += (f"At this cap, {join(f'{v} {LABEL[a]}' for a, v in over.items() if v)} calls billed more input than the "
                 f"6,000-token cap (at most {mx:,} tokens), because the byte-based estimate undercounts some text. ")
     if sum(inv.values()):
-        txt += (f"Invalid outputs, scored 0.5 under the frozen policy: {join(f'{v} {LABEL[a]}' for a, v in inv.items() if v)}"
-                + (" (isolated calls have a 128-token output cap per worker)." if inv.get("isolated") else "."))
+        resp = {a: N.get(f"{Q}/arms/{a}@6000/invalid_responses") for a in BUDGETED}
+        txt += ("Invalid case-level predictions (invalid API responses), scored 0.5 under the frozen policy: "
+                + join(f"{v} {LABEL[a]} ({resp[a]})" for a, v in inv.items() if v)
+                + ("; isolated calls have a 128-token output cap per worker." if inv.get("isolated") else "."))
     return txt
 
 
@@ -642,15 +648,19 @@ def second_model_sentence(N):
                 f"Qwen's {N.f(Q + '/arms/full@nocap/auroc')}. ")
     inv = gemma_invalid(N)
     if sum(inv.values()):
-        out += f"Gemma gave {sum(inv.values())} invalid outputs, scored 0.5 (Appendix D). "
+        resp = gemma_invalid(N, "invalid_responses")
+        out += (f"At 2,000 tokens and with the full log, Gemma had {sum(inv.values())} invalid case-level predictions "
+                f"(from {sum(resp.values())} invalid API responses), scored 0.5 (Appendix D). ")
     return out
 
 
-def gemma_invalid(N):
-    arms = [a for a in BUDGETED if N.has(f"{G}/arms/{a}@2000/invalid")]
-    inv = {a: N.get(f"{G}/arms/{a}@2000/invalid") for a in arms}
-    if N.has(f"{G}/arms/full@nocap/invalid"):
-        inv["full"] = N.get(f"{G}/arms/full@nocap/invalid")
+def gemma_invalid(N, key="invalid"):
+    """Per-arm invalid counts for the second model at 2,000 tokens and with the full log.
+    key='invalid' counts case-level predictions; 'invalid_responses' counts API responses."""
+    arms = [a for a in BUDGETED if N.has(f"{G}/arms/{a}@2000/{key}")]
+    inv = {a: N.get(f"{G}/arms/{a}@2000/{key}") for a in arms}
+    if N.has(f"{G}/arms/full@nocap/{key}"):
+        inv["full"] = N.get(f"{G}/arms/full@nocap/{key}")
     return inv
 
 
@@ -786,9 +796,9 @@ def appendix(N):
               "Retrospective detection before finalization does not show that an online intervention would "
               "prevent harm without disrupting legitimate tasks. Pre-registered results depend on "
               + ("two hosted models" if stage_done(N, G, "stage1") else "one hosted model")
-              + " on one date with reasoning disabled; the reasoning-enabled run is exploratory. If the recorder were incomplete or adversarial, dependency selection would "
-              "degrade at least as much as our masking experiments show, and possibly worse, because an attacker "
-              "could cut the specific links that matter. Four known gaps are pinned as expected failures in the "
+              + " on one date with reasoning disabled; the reasoning-enabled run is exploratory. Incomplete or adversarial "
+              "records could change performance differently from these masking conditions. Targeted removal of "
+              "decisive links could be more damaging; we did not evaluate adaptive tampering. Four known gaps are pinned as expected failures in the "
               "offline tests: the rule monitor over-flags two hand-built worlds that never occur in the data "
               "(deduplicating held-out data against a copy of itself, and training on one shard of a mixed "
               "artifact); masking does not rewrite IDs inside free-text notes (generated notes contain none, and the "
@@ -845,29 +855,92 @@ def llm_statement():
     return p.read_text().strip() if p.exists() else "[LLM USAGE STATEMENT TO CONFIRM]"
 
 
+def sensitivity_section(N):
+    """Pre-registered invalid-output sensitivity (valid-only and best/worst AUROC) plus descriptive paired checks."""
+    rows = []
+    for M, name in ((Q, "Qwen"), (G, "Gemma")):
+        keys = [(f"{a}@2000", f"{LABEL[a]}, 2k") for a in BUDGETED] + [("full@nocap", "full log")]
+        keys += [(f"{a}@6000", f"{LABEL[a]}, 6k") for a in BUDGETED]
+        for k, lab in keys:
+            a = f"{M}/arms/{k}"
+            if not N.has(a + "/auroc"):
+                continue
+            show = N.get(a + "/invalid") > 0 or (M == G and k in ("dependency@2000", "lexical@2000", "full@nocap"))
+            if show:
+                rows.append([f"{name}, {lab}", N.f(a + "/auroc"),
+                             f"{N.f(a + '/auroc_valid_only')} ({N.i(a + '/n_valid')}/60)",
+                             f"{N.f(a + '/auroc_missing_worst')}\u2013{N.f(a + '/auroc_missing_best')}"])
+    if not rows:
+        return []
+    txt = ("**Invalid-output sensitivity (pre-registered).** The frozen policy scores every invalid prediction 0.5; "
+           "those are the principal results. The protocol also specified AUROC on valid predictions only and the two "
+           "extremes obtained by giving each invalid prediction the score least or most favourable to the arm, using "
+           "its known label (Table 4). Valid-only values use each arm's own subset of cases, so they are not paired "
+           "across arms, and the extremes are sensitivity scenarios, not confidence intervals. ")
+    ql = f"{Q}/invalid_sensitivity/dependency-lexical@2000"
+    if N.has(ql + "/n_both_valid") and N.get(ql + "/n_both_valid") == 60:
+        txt += "Qwen's dependency, lexical and full-log arms at 2,000 tokens had no invalid predictions, so the primary contrast is unaffected. "
+    gl, gf = f"{G}/invalid_sensitivity/dependency-lexical@2000", f"{G}/invalid_sensitivity/dependency-full@nocap"
+    if N.has(gf + "/n_both_valid") and N.has(gl + "/n_both_valid"):
+        txt += (f"For Gemma (descriptive, added after the freeze): on the {N.i(gf + '/n_both_valid')} cases valid in "
+                f"both arms the dependency-minus-full difference was {sg(N.get(gf + '/diff_both_valid'), 3)}, and under "
+                f"the assignment least favourable to dependency it was {sg(N.get(gf + '/diff_worst_for_dependency'), 3)}; "
+                f"for dependency minus lexical the values were {sg(N.get(gl + '/diff_both_valid'), 3)} "
+                f"({N.i(gl + '/n_both_valid')} cases) and {sg(N.get(gl + '/diff_worst_for_dependency'), 3)}. These "
+                "checks do not establish significance or generalization.")
+    return [("p", txt),
+            ("table", ["Monitor and arm", "Frozen AUROC (invalid = 0.5)", "Valid-only AUROC (valid/60)",
+                       "Worst\u2013best assignment"], rows,
+             "**Table 4.** Invalid-output sensitivity for every pre-registered arm with invalid predictions, plus "
+             "Gemma's lexical arm for comparison.",
+             {"size": 8, "col_widths": [2.0, 1.4, 1.5, 1.4]})]
+
+
 def appendix_d(N):
     dep2, lex2 = f"{Q}/arms/dependency@2000", f"{Q}/arms/lexical@2000"
     out = [("h2", "Appendix D. Supplementary results and figures"),
+           ("p", "**Single-worker controls (pre-registered).** On the 9 control pairs, where one worker's events decide "
+                 f"the label, Qwen scored {N.f(Q + '/controls/dependency/auroc')} with dependency evidence, "
+                 f"{N.f(Q + '/controls/lexical/auroc')} lexical, {N.f(Q + '/controls/chronological/auroc')} chronological "
+                 f"and {N.f(Q + '/controls/full/auroc')} with the full log. Isolated review shows no events at 2,000 "
+                 f"tokens ({N.f(Q + '/controls/isolated/auroc')}), so the controls do not test single-worker review."),
            ("p", "**Calibrated thresholds (pre-registered secondary metric).** " + frozen_threshold_sentence(N, dep2, lex2))]
     det = cap6k_details(N)
     if det:
         out.append(("p", "**6,000-token stage.** " + det))
+    if stage_done(N, Q, "stage3"):
+        out.append(("table", TABLE_HEAD, arm_rows(N, Q, 6000),
+                    "**Table 3.** Held-out results at the 6,000-token cap, qwen3.5-397b; columns as in Table 1.",
+                    {"size": 8, "col_widths": TABLE_WIDTHS}))
+    out += sensitivity_section(N)
     inv = gemma_invalid(N) if gemma_ready(N) else {}
     if sum(inv.values()):
-        out.append(("p", "**Second-model invalid outputs.** Scored 0.5 under the frozen policy: "
-                    + join(f"{v} {LABEL.get(a, 'full-log')}" for a, v in inv.items() if v)
-                    + " at 2,000 tokens or with the full log. Those at 2,000 tokens were repetition loops (\"our our "
-                    "our ...\"); of the full-log ones, all but one were long answers cut off at the 384-token output cap, and "
-                    "one contained two JSON answers."))
+        resp = gemma_invalid(N, "invalid_responses")
+        trunc = gemma_invalid(N, "invalid_responses_truncated")
+        gf = f"{G}/arms/full@nocap"
+        out.append(("p", "**Second-model invalid outputs.** At 2,000 tokens and with the full log, Gemma produced "
+                    f"{sum(resp.values())} invalid API responses affecting {sum(inv.values())} case-level predictions "
+                    "(invalid responses / invalid predictions: "
+                    + join(f"{LABEL.get(a, 'full log')} {resp[a]}/{v}" for a, v in inv.items() if v)
+                    + "; an isolated case is invalid if any of its three worker calls is). All are scored 0.5 under the "
+                    "frozen policy. Every invalid 2,000-token response was a repetition loop (\"our our our ...\") that "
+                    f"ran to the 384-token output cap (128 for isolated calls). Of the {N.i(gf + '/invalid_responses')} "
+                    f"full-log responses, {N.i(gf + '/invalid_responses_truncated')} were long answers cut off at the "
+                    "384-token cap and the rest contained two JSON answers with commentary between them; the parser "
+                    "accepts one JSON object, optionally inside a single code fence, so fencing alone never made an "
+                    "output invalid."))
     out.append(("fig", "figures/fig2_auroc_by_method.png", 6.3,
                 "**Figure 3.** Held-out AUROC by selection method at two input caps (primary monitor qwen3.5-397b; error "
                 "bars: 95% family-bootstrap intervals over 6 held-out families; dashed line: chance; grey line: full log "
                 "with no cap). Isolated review spends its budget on three copies of the prompt overhead and sees no "
                 "events at 2,000 tokens, so its AUROC there is exactly 0.5. The same numbers are in Table 1."))
     if gemma_ready(N) and (ROOT / "figures/figS1_auroc_by_method_secondary.png").exists():
-        out.append(("fig", "figures/figS1_auroc_by_method_secondary.png", 6.3,
+        g6 = stage_done(N, G, "stage3")
+        out.append(("fig", "figures/figS1_auroc_by_method_secondary.png", 6.3 if g6 else 4.2,
                     "**Figure 4.** The same for the pre-registered second model, gemma-4-31b-it. Only methods scored "
-                    "on all 60 held-out trajectories are shown; invalid outputs score 0.5."))
+                    "on all 60 held-out trajectories are shown; invalid outputs score 0.5."
+                    + ("" if g6 else " Its 6,000-token stage had not finished when this version was built, so no "
+                       "6,000-token panel is shown.")))
     return out
 
 
