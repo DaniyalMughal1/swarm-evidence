@@ -714,6 +714,22 @@ def hypotheses_paragraph(N):
             "freeze; the runs in Appendix C are exploratory.")
 
 
+def reasoning_paragraph(N, R):
+    d, l = f"{R}/arms/dependency@2000", f"{R}/arms/lexical@2000"
+    n_inv = N.get(d + "/invalid") + N.get(l + "/invalid")
+    txt = ("**Reasoning-enabled monitor.** With Qwen's reasoning on (effort medium, 4,096-token output cap including "
+           f"billed reasoning), {n_inv} of 120 outputs were invalid ({N.i(d + '/invalid')} dependency, "
+           f"{N.i(l + '/invalid')} lexical), all of them responses cut off when reasoning used up the output cap before an answer was "
+           f"written; dependency calls averaged {N.get(d + '/mean_output_tokens'):.0f} output tokens. With invalid "
+           f"outputs scored 0.5, AUROC was {N.f(d + '/auroc')} with dependency evidence "
+           f"({N.i(d + '/verdict_violation_tp')} true and {N.i(d + '/verdict_violation_fp')} false violation verdicts) "
+           f"and {N.f(l + '/auroc')} with lexical evidence. ")
+    if n_inv > 30:
+        txt += ("Because so many outputs were cut off, this check is inconclusive about whether reasoning removes the "
+                "role-rule errors; a larger output cap would be needed. ")
+    return txt + role_rule_persistence(N, R)
+
+
 def role_rule_persistence(N, R):
     """Do the A4/B2 role-rule false alarms persist with reasoning enabled?"""
     k = "/verdicts_by_family/dependency@2000/"
@@ -721,8 +737,8 @@ def role_rule_persistence(N, R):
         return ""
     base = sum(N.get(Q + k + f).get("legit->violation", 0) for f in ("A4", "B2"))
     rsn = sum(N.get(R + k + f).get("legit->violation", 0) for f in ("A4", "B2"))
-    return (f"In the two role-rule families (A4, B2) it flagged {rsn} of 10 legitimate twins, against {base} with "
-            "reasoning disabled.")
+    return (f"Among its outputs in the two role-rule families (A4, B2), {rsn} of 10 legitimate twins were flagged "
+            f"(invalid outputs count as not flagged), against {base} with reasoning disabled.")
 
 
 def live_limitation(N):
@@ -855,15 +871,7 @@ def appendix_c(N):
     out.append(("p", "These runs were added after seeing stage-1 results and are not part of the pre-registered "
                      "analysis (protocol/POST_FREEZE_CHANGES.md)."))
     if N.has(R + "/arms/dependency@2000/auroc") and N.has(R + "/arms/lexical@2000/auroc"):
-        out.append(("p", "**Reasoning-enabled monitor.** With Qwen's reasoning on (effort medium, 4,096-token output cap "
-                         "including billed reasoning), held-out AUROC at the 2,000-token cap was "
-                         f"{N.f(R + '/arms/dependency@2000/auroc')} with dependency evidence "
-                         f"({N.i(R + '/arms/dependency@2000/verdict_violation_tp')} true and "
-                         f"{N.i(R + '/arms/dependency@2000/verdict_violation_fp')} false violation verdicts, "
-                         f"{N.i(R + '/arms/dependency@2000/invalid')} invalid outputs) and "
-                         f"{N.f(R + '/arms/lexical@2000/auroc')} with lexical evidence, using a mean of "
-                         f"{N.get(R + '/arms/dependency@2000/mean_output_tokens'):.0f} output tokens per dependency call. "
-                         + role_rule_persistence(N, R)))
+        out.append(("p", reasoning_paragraph(N, R)))
     else:
         out.append(("p", "**Reasoning-enabled monitor.** Planned, but not finished when this version was built; no result is reported."))
     if N.has(rep + "/n_cases") and N.has(rep_l + "/n_cases"):
