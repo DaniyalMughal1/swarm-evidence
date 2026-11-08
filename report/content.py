@@ -341,9 +341,9 @@ def body(N):
     b += [
         ("h3", "4.4 Second model, controls and cost"),
         ("p", second_model_sentence(N) +
-              "On the 9 single-worker control pairs, dependency, lexical, chronological and full-log review gave "
-              f"AUROC {N.f(Q + '/controls/dependency/auroc')}, {N.f(Q + '/controls/lexical/auroc')}, "
-              f"{N.f(Q + '/controls/chronological/auroc')} and {N.f(Q + '/controls/full/auroc')}; isolated review shows no events at this cap "
+              "On the 9 single-worker control pairs, Qwen scored "
+              f"{N.f(Q + '/controls/dependency/auroc')} (dependency), {N.f(Q + '/controls/lexical/auroc')} (lexical), "
+              f"{N.f(Q + '/controls/chronological/auroc')} (chronological) and {N.f(Q + '/controls/full/auroc')} (full log); isolated review shows no events at this cap "
               f"({N.f(Q + '/controls/isolated/auroc')}), so the controls do not test it. All {N.i('costs/n_calls_total')} "
               f"recorded model calls, including pilots, cost {N.f('costs/total_credits', 2)} Adaption credits. "
               + exploratory_pointer(N)),
@@ -372,9 +372,8 @@ def body(N):
               "semantics; it shows what structured evidence permits, not a deployable detector. "
               + live_limitation(N) + " Appendix A lists further limitations, including four known gaps pinned by "
               "tests."),
-        ("p", "**Future work.** Sibling-consumer expansion for aggregate constraints, hybrid checker-plus-LLM "
-              "monitors, logs from live model-driven workers, more template families, and adversaries who attack the "
-              "recorder or launder lineage through untracked channels."),
+        ("p", "**Future work.** Sibling-consumer expansion, hybrid checker-plus-LLM monitors, live-worker logs, more "
+              "families, and adversaries who attack the recorder or launder lineage off the ledger."),
         ("h2", "6. Conclusion"),
         ("p", "At a fixed context budget, selecting evidence through recorded artifact dependencies retained "
               f"{N.pct(dep2 + '/gold_recall')} of decisive cross-agent evidence where lexical retrieval retained "
@@ -384,12 +383,10 @@ def body(N):
               f"deterministic checker scored at {N.f('offline_test/dependency@2000@full/rule_auroc')}"
               + (f" and the second model at {N.f(G + '/arms/dependency@2000/auroc')}" if gemma_ready(N) else "")
               + ". Lineage selection fails predictably on "
-              "out-of-lineage constraints and missing metadata. We release the benchmark, protocol and every run "
-              "record."),
+              "out-of-lineage constraints and missing metadata."),
         ("h2", "Code and Data"),
-        ("p", f"Repository: {REPO} (MIT). It holds the synthetic data, labels, frozen protocol and every model call with billed "
-              "tokens and cost; `python -m swarm_evidence analyze` regenerates all tables and figures. No real or "
-              "personal data."),
+        ("p", f"{REPO} (MIT): synthetic data, labels, frozen protocol and every model call; `python -m "
+              "swarm_evidence analyze` regenerates all tables and figures. No real or personal data."),
         ("h2", "Author Contributions"),
         ("p", author_contributions()),
         ("h2", "References"),
@@ -629,16 +626,25 @@ def second_model_sentence(N):
            f"role-rule legitimate twins and, like Qwen, {N.i(goo + '/violations_flagged')} of the "
            f"{N.i(goo + '/violations_total')} C4 violations. This is a secondary result; with six held-out families "
            "it does not establish a general advantage. ")
-    gf = f"{G}/arms/full@nocap"
-    if stage_done(N, G, "stage2"):
-        out += (f"Reading the whole log, Gemma scored {N.f(gf + '/auroc')} with {N.i(gf + '/verdict_violation_fp')} "
-                "false alarms on 30 legitimate twins, so the full-log shortfall seen with Qwen "
-                + ("recurred. " if N.get(gf + "/auroc") < N.get(g_dep + "/auroc") else "did not recur. "))
-    n_inv = N.get(g_dep + "/invalid") + N.get(g_lex + "/invalid")
-    if n_inv:
-        out += (f"Invalid outputs, scored 0.5 under the frozen policy: {N.i(g_dep + '/invalid')} in the dependency arm "
-                f"and {N.i(g_lex + '/invalid')} in the lexical arm. ")
+    gf, gdf = f"{G}/arms/full@nocap", f"{G}/contrasts/dependency-full@nocap"
+    if stage_done(N, G, "stage2") and N.has(gdf + "/diff"):
+        out += (f"Reading the whole log, Gemma scored {N.f(gf + '/auroc')} ({N.i(gf + '/verdict_violation_fp')} false "
+                f"alarms on 30 legitimate twins): {'lower' if N.get(gdf + '/diff') > 0 else 'higher'} than with "
+                f"dependency evidence ({sg(N.get(gdf + '/diff'))} {ci(N, gdf + '/ci95_family_bootstrap')}), but "
+                f"{'well above' if N.get(gf + '/auroc') > N.get(Q + '/arms/full@nocap/auroc') else 'not above'} "
+                f"Qwen's {N.f(Q + '/arms/full@nocap/auroc')}. ")
+    inv = gemma_invalid(N)
+    if sum(inv.values()):
+        out += f"{sum(inv.values())} Gemma outputs were invalid and scored 0.5 (Appendix D). "
     return out
+
+
+def gemma_invalid(N):
+    arms = [a for a in BUDGETED if N.has(f"{G}/arms/{a}@2000/invalid")]
+    inv = {a: N.get(f"{G}/arms/{a}@2000/invalid") for a in arms}
+    if N.has(f"{G}/arms/full@nocap/invalid"):
+        inv["full"] = N.get(f"{G}/arms/full@nocap/invalid")
+    return inv
 
 
 def frozen_threshold_sentence(N, dep2, lex2):
@@ -821,6 +827,13 @@ def appendix_d(N):
     det = cap6k_details(N)
     if det:
         out.append(("p", "**6,000-token stage.** " + det))
+    inv = gemma_invalid(N) if gemma_ready(N) else {}
+    if sum(inv.values()):
+        out.append(("p", "**Second-model invalid outputs.** Scored 0.5 under the frozen policy: "
+                    + join(f"{v} {LABEL.get(a, 'full-log')}" for a, v in inv.items() if v)
+                    + " at 2,000 tokens or with the full log. Those at 2,000 tokens were repetition loops (\"our our "
+                    "our ...\"); the full-log ones were long answers cut off at the 384-token output cap or wrapped in "
+                    "code fences."))
     out.append(("fig", "figures/fig2_auroc_by_method.png", 6.3,
                 "**Figure 3.** Held-out AUROC by selection method at two input caps (primary monitor qwen3.5-397b; error "
                 "bars: 95% family-bootstrap intervals over 6 held-out families; dashed line: chance; grey line: full log "
