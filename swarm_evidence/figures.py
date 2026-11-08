@@ -104,8 +104,9 @@ def fig_main(summary, model, out: Path):
         ax.axhline(0.5, color=INK2, lw=0.7, ls=(0, (3, 2)))
         if full and not full.get("incomplete"):
             ax.axhline(full["auroc"], color=COLORS["full"], lw=0.9)
-            ax.text(len(arms) - 0.5, full["auroc"] + 0.015, f"full log, no cap: {full['auroc']:.2f}", ha="right",
-                    fontsize=6.5, color=INK2)
+            # label in the top-right corner so it never collides with bars or error bars
+            ax.text(len(arms) - 0.45, 1.04, f"grey line: full log, no cap ({full['auroc']:.2f})", ha="right",
+                    va="top", fontsize=6.5, color=INK2)
         ax.set_xticks(range(len(arms)))
         ax.set_xticklabels([ARM_LABEL[a].replace(" (3 calls)", "") for a in arms], rotation=30, ha="right",
                            rotation_mode="anchor", fontsize=7)
