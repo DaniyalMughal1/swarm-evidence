@@ -93,11 +93,13 @@ def predictions(calls):
         for c in cs:
             shown |= set(json.loads(c["shown_ids"]))
         cited = [i for p in parsed if p.get("valid") for i in p["evidence_event_ids"]]
+        cited_ids = sorted(set(cited))
         unsupported = sum(len(p.get("unsupported_ids", [])) for p in parsed if p.get("valid"))
         preds.append({
             "model": model, "arm": arm, "cap": cap, "visibility": vis, "run_id": rid, "replicate": rep,
             "stage": cs[0]["stage"], "score": score, "verdict": verdict, "valid": valid,
             "n_calls": len(cs), "shown_ids": sorted(shown), "n_cited": len(cited), "n_unsupported": unsupported,
+            "cited_ids": cited_ids,
             "input_tokens": sum(c["input_tokens"] or 0 for c in cs),
             "output_tokens": sum(c["output_tokens"] or 0 for c in cs),
             "cost": sum(c["cost"] or 0 for c in cs),
@@ -151,6 +153,9 @@ def arm_metrics(ps, labels, cases, gold, th=None):
            "cited_ids": sum(p["n_cited"] for p in ps), "unsupported_ids": sum(p["n_unsupported"] for p in ps),
            "gold_recall": statistics.mean(len(set(p["shown_ids"]) & set(gold[p["run_id"]])) / len(gold[p["run_id"]])
                                           for p in ps)}
+    fps = [p for p, y in zip(ps, ys) if y == 0 and p["verdict"] == "violation"]
+    out["fp_citing_unrelated_work"] = sum(1 for p in fps if set(p["cited_ids"]) - set(labels[p["run_id"]]["core_event_ids"]))
+    out["fp_total"] = len(fps)
     valid = [(p["score"], y) for p, y in zip(ps, ys) if p["valid"]]
     out["auroc_valid_only"] = auroc([s for s, _ in valid], [y for _, y in valid]) if valid else None
     best = [(1.0 if y else 0.0) if not p["valid"] else p["score"] for p, y in zip(ps, ys)]

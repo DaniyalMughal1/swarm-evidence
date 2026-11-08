@@ -1,3 +1,5 @@
+> **Status update (November 8, 2026):** this brief has been executed. See the README for results, `protocol/` for the frozen protocol and post-freeze changes, and `report/` for the PDF. The brief below is preserved as written.
+
 # Build Swarm Evidence and finish a submission-ready report
 
 ## Objective

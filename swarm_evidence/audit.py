@@ -142,10 +142,10 @@ def audit_report(root: Path) -> dict:
     def walk(prefix, obj):
         if isinstance(obj, dict):
             for k, v in obj.items():
-                walk(f"{prefix}.{k}" if prefix else k, v)
+                walk(f"{prefix}/{k}" if prefix else k, v)
         elif isinstance(obj, list):
             for i, v in enumerate(obj):
-                walk(f"{prefix}[{i}]", v)
+                walk(f"{prefix}/{i}", v)
         else:
             flat[prefix] = obj
 
