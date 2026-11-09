@@ -1,5 +1,7 @@
 # Swarm Evidence: Selecting Cross-Agent Evidence Under a Fixed Monitoring Budget
 
+> Superseded by the final report: `report/swarm_evidence_report.pdf` (built by `report/build_report.py` from `report/content.py`). This outline is kept for provenance.
+
 **DRAFT OUTLINE ONLY. No experiments have been run. Do not submit this file as a completed paper.**
 
 Use the [official Google Doc template](https://docs.google.com/document/d/1_1_27EyZriMlc8n8EBE2YScaeyMjm-8xjR097nmHXAE/copy?usp=sharing). Its section order is reproduced here as a planning aid; this Markdown is not a substitute for the required formatted report. Preserve the template's title/author styling and event footnote. Target 4–6 main pages; hard cap 8.

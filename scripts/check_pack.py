@@ -38,6 +38,8 @@ def main():
         if not (root / name).is_file():
             errors.append(f'Missing deliverable: {name}')
     for path in root.rglob('*.md'):
+        if any(part in {'.venv', '.git', 'node_modules'} for part in path.relative_to(root).parts):
+            continue
         if '.git' in path.parts:
             continue
         text = path.read_text()

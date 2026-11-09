@@ -1,0 +1,14 @@
+[
+ "[1] Greenblatt, R., Shlegeris, B., Sachan, K., & Roger, F. (2024). AI Control: Improving Safety Despite Intentional Subversion. Proceedings of the 41st International Conference on Machine Learning, PMLR 235:16295–16336. arXiv:2312.06942v5. https://arxiv.org/abs/2312.06942v5",
+ "[2] Zhang, Y., Lyu, S., Wang, J., Ge, Y., Guo, J., Hamm, J., & Reddy, C. K. (2026). Deny Without Disabling: Authorization-Paired Evaluation and Control for Multi-Agent Systems. arXiv:2610.00371v1. https://arxiv.org/abs/2610.00371v1",
+ "[3] Makins, O., Angelini, O., Shams, Z., & Phuong, M. (2026). Multi-Agent AI Control: Distributed Attacks Hamper Per-Instance Monitors. arXiv:2607.07368v2. https://arxiv.org/abs/2607.07368v2",
+ "[4] Tao, Y., Zheng, X., Yang, S., Tao, M., & Wang, X. (2026). GroupGuard: A Framework for Modeling and Defending Collusive Attacks in Multi-Agent Systems. arXiv:2603.13940v1. https://arxiv.org/abs/2603.13940v1",
+ "[5] Rose, A., Cullen, C., Abdelnabi, S., Torr, P., Kaplowitz, B. G., & Schroeder de Witt, C. (2026). Detecting Multi-Agent Collusion Through Multi-Agent Interpretability. arXiv:2604.01151v5. https://arxiv.org/abs/2604.01151v5",
+ "[6] Jones, E., Dragan, A., & Steinhardt, J. (2025). Adversaries Can Misuse Combinations of Safe Models. Proceedings of the 42nd International Conference on Machine Learning, PMLR 267:28327–28349. https://proceedings.mlr.press/v267/jones25a.html",
+ "[7] Hammond, L., Chan, A., Clifton, J., Hoelscher-Obermaier, J., Khan, A., McLean, E., et al. (2025). Multi-Agent Risks from Advanced AI. Cooperative AI Foundation Technical Report #1. arXiv:2502.14143. https://arxiv.org/abs/2502.14143",
+ "[8] Bindschaedler, L., Botha, Q., & Siebenbrunner, C. (2026). Agent Flight Recorder: Tamper-Evident Audit Trails with On-Chain Anchoring for Long-Horizon Tool-Using Agents. arXiv:2609.01931. https://arxiv.org/abs/2609.01931",
+ "[9] Sardianos, C., Pla, I., Efthymiou, V., Varlamis, I., Lagkas, T., Sarigiannidis, P., & Papadopoulos, G. Th. (2026). HANSARD: A Reference Architecture for Forensic Readiness, Runtime Witnessing, and Graded Attribution in Autonomous Multi-Agent AI Systems. arXiv:2608.22512. https://arxiv.org/abs/2608.22512",
+ "[10] Kitaoka, J. (2026, November 5). Securing systems against agent swarms [Recorded talk]. Swarm Alignment Hackathon, Apart Research. Segments 12:42–19:52, 28:35–31:59 and Q&A 56:11–57:25. https://us06web.zoom.us/rec/share/OkOtOYVrZQ-AcL8KW67GljV9aSwr9_fpUkSwPnSOi9gfbSKvtgQ-Hmv-iISMs0e3.ws_5jHI_LbDWFMVV",
+ "[11] Robertson, S., & Zaragoza, H. (2009). The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval. https://doi.org/10.1561/1500000019",
+ "[12] Lavrenko, V., & Croft, W. B. (2001). Relevance-Based Language Models. Proceedings of the 24th Annual International ACM SIGIR Conference on Research and Development in Information Retrieval, 120–127. https://doi.org/10.1145/383952.383972"
+]

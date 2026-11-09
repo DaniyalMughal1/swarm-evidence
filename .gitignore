@@ -14,3 +14,5 @@ recordings/
 *.m4a
 *.log
 .pytest_cache/
+results/runs.sqlite
+results/runs.sqlite-*

@@ -1,0 +1,243 @@
+{
+ "frozen_at_utc": "2026-11-08T18:20:09+00:00",
+ "git_head_at_freeze": "814be29d81b18b68251df2dd57615e9e447fee0a",
+ "note": "Frozen after development pilots v1-v3; before any calibration or held-out call.",
+ "data_sha256": {
+  "data/observed/trajectories.jsonl": "145e8428c2cc3fd8c1f6d62cbc95e07e397f5fa596253afc48a6c426504bb9d4",
+  "data/manifest/cases.jsonl": "721cf858d6e53049a0f25fa9280a3dda376e1f960a1a79ac8bfc0a1a0fc83372",
+  "data/eval/labels.jsonl": "1412ef889b68f4228d951ed992d0965401d4dfd0b7cd86af6392a20208517ec0",
+  "data/eval/validity.jsonl": "9c55aaa2b9a071b5771dbec427817a4f4ddae4978b63b64a863e70a3dccbdab0"
+ },
+ "code_sha256": {
+  "swarm_evidence/world.py": "d0f919200dd8f39060c3272721c327560966ef4c0c6754a23cb9f4a5830ef822",
+  "swarm_evidence/scenarios.py": "23e3ac13b924ce5f80d5e39b5b595e62662f2aec4867ee92ea44444825c611d8",
+  "swarm_evidence/oracle.py": "4cb157ee428d8899a77147f4b304b708dbcc9d881f816855e7366a32988c3849",
+  "swarm_evidence/rules_monitor.py": "0a5d7cea1caa682befa2a5a4dc84396c904eee3ce79c3f5c30802e549c5cca2a",
+  "swarm_evidence/dataset.py": "f9218da7715795fcc723ce0102fae6a2e78f1d9c7e08ca22d75f8c7f0e2cb7e3",
+  "swarm_evidence/prompts.py": "598c2d522af9595650b3b60985aba48f557046499f02c37fa3c674e30f5482d6",
+  "swarm_evidence/selection.py": "17e383bfb2d0290b5fd8224f7cbf6bee63be7305578662495b5f89a4d27366bb",
+  "swarm_evidence/visibility.py": "cb02ec4215f450c7694281d2f25653f66d2b1a60f67b70fd52be9adeb82180e4",
+  "swarm_evidence/metrics.py": "381d112d84c7c67b51c01795851e09cdd0001ab2ffe5abe7e412e65426e6f9f1",
+  "swarm_evidence/adaption_monitor.py": "44d86649e32655dd1f9fc7d5b475fd993741e5e970aa67a6ed82c787ba9d9d27",
+  "swarm_evidence/runner.py": "e7e1d04ea421178e228d8586ed8e9b742d9e0421eb20592ba8c99c205faa8649",
+  "swarm_evidence/protocol.py": "b19621378438ce9c6f65f3778d7be14c2ae9310ceb1be5c2ce12bd036aa3b012",
+  "swarm_evidence/offline.py": "b11d03abd5ced313e28d3f5cc231080d961cdfaa2a68121d6bcbffaa7eba40f3"
+ },
+ "prompt_hash": "0fade4df61f8f865",
+ "selector_version": "v1",
+ "token_estimator": {
+  "bytes_per_token": 2.5,
+  "framing_tokens": 24
+ },
+ "primary_model": "qwen3.5-397b",
+ "secondary_model": "gemma-4-31b-it",
+ "model_settings": {
+  "temperature": 0.0,
+  "reasoning": "effort=none for qwen3.5-397b",
+  "output_cap_single": 384,
+  "output_cap_isolated_per_call": 128
+ },
+ "caps": [
+  2000,
+  6000
+ ],
+ "budgeted_arms": [
+  "dependency",
+  "lexical",
+  "chronological",
+  "shuffled",
+  "isolated",
+  "bm25",
+  "lexical_prf"
+ ],
+ "primary_contrast": {
+  "a": "dependency",
+  "b": "lexical",
+  "cap": 2000,
+  "visibility": "full",
+  "metric": "AUROC",
+  "cohort": "test core trajectories (controls excluded)",
+  "interval": "paired percentile bootstrap resampling whole template families, 10000 draws, seed 0"
+ },
+ "stages": {
+  "pilot": {
+   "subset": "prompt_design",
+   "cases": [
+    "A1:0",
+    "A1:1",
+    "B1:0",
+    "B1:1",
+    "C1:0",
+    "C1:1"
+   ],
+   "arms": [
+    "dependency",
+    "lexical",
+    "chronological",
+    "isolated",
+    "shuffled"
+   ],
+   "caps": [
+    2000
+   ],
+   "visibility": [
+    "full"
+   ]
+  },
+  "calibration": {
+   "subset": "calibration",
+   "arms": [
+    "dependency",
+    "lexical",
+    "chronological",
+    "shuffled",
+    "isolated",
+    "bm25",
+    "lexical_prf",
+    "full"
+   ],
+   "caps": [
+    2000,
+    6000
+   ],
+   "visibility": [
+    "full"
+   ]
+  },
+  "stage1": {
+   "subset": "test",
+   "arms": [
+    "dependency",
+    "lexical"
+   ],
+   "caps": [
+    2000
+   ],
+   "visibility": [
+    "full"
+   ]
+  },
+  "stage2": {
+   "subset": "test",
+   "arms": [
+    "chronological",
+    "shuffled",
+    "isolated",
+    "bm25",
+    "lexical_prf",
+    "full"
+   ],
+   "caps": [
+    2000
+   ],
+   "visibility": [
+    "full"
+   ]
+  },
+  "stage3": {
+   "subset": "test",
+   "arms": [
+    "dependency",
+    "lexical",
+    "chronological",
+    "shuffled",
+    "isolated",
+    "bm25",
+    "lexical_prf"
+   ],
+   "caps": [
+    6000
+   ],
+   "visibility": [
+    "full"
+   ]
+  },
+  "stage4": {
+   "subset": "test",
+   "arms": [
+    "dependency",
+    "lexical"
+   ],
+   "caps": [
+    2000,
+    6000
+   ],
+   "visibility": [
+    "random25",
+    "random50",
+    "bridges"
+   ]
+  },
+  "controls": {
+   "subset": "control",
+   "arms": [
+    "dependency",
+    "lexical",
+    "chronological",
+    "isolated",
+    "full"
+   ],
+   "caps": [
+    2000
+   ],
+   "visibility": [
+    "full"
+   ]
+  }
+ },
+ "threshold_rule": {
+  "grid": [
+   0.0,
+   0.05,
+   0.1,
+   0.15,
+   0.2,
+   0.25,
+   0.3,
+   0.35,
+   0.4,
+   0.45,
+   0.5,
+   0.55,
+   0.6,
+   0.65,
+   0.7,
+   0.75,
+   0.8,
+   0.85,
+   0.9,
+   0.95,
+   1.0
+  ],
+  "max_calibration_fpr": 0.1
+ },
+ "invalid_output_policy": "first attempt only; invalid/missing -> score 0.5 and operational abstention; isolated arm invalid unless all three calls valid",
+ "out_of_lineage_families": [
+  "C3",
+  "C4"
+ ],
+ "hypotheses": {
+  "H1_primary": "At the 2,000-token cap with full visibility, dependency selection has higher held-out AUROC than lexical retrieval (primary contrast; family-clustered interval).",
+  "H2_boundary": "Dependency selection misses violations whose decisive evidence is not an ancestor of the target (test family C4, sibling payments); lexical/chronological may retain some of it.",
+  "H3_budget": "The dependency advantage over non-graph retrieval shrinks at the 6,000-token cap.",
+  "H4_metadata": "Removing dependency metadata (random 25%/50%, cross-worker bridges) degrades dependency selection more than lexical retrieval.",
+  "H5_rules": "On the same selected evidence, the deterministic rule monitor matches or exceeds the LLM wherever the selected lineage is complete."
+ },
+ "secondary_metrics": [
+  "AUPRC",
+  "TPR/FPR raw counts at frozen calibration thresholds and at 0.5",
+  "Wilson intervals",
+  "benign automated acceptance",
+  "abstention and invalid rates",
+  "unsupported cited IDs",
+  "gold-evidence recall",
+  "latency",
+  "billed input/output tokens",
+  "credited cost",
+  "cap overruns",
+  "per-family AUROC",
+  "valid-only AUROC and best/worst missing-score sensitivity"
+ ],
+ "pilot_history": "pilot (prompt v1, estimator 3.0) -> pilot_v2 (prompt v2: shorter reason, estimator 2.5) -> pilot_v3 (prompt v3: reason-first key order); all on the 12 prompt-design development trajectories (families A1/B1/C1, seeds 0-1). No held-out or calibration case was run.",
+ "exploratory_rule": "Any analysis or run not listed here is labelled exploratory in the report."
+}

@@ -2,37 +2,41 @@
 
 Source: [event guidelines and form](https://apartresearch.com/sprints/swarm-alignment-2026). Official deadline: November 8, 23:59 AoE; November 9, 06:59 Toronto. Target ready by November 8, 23:00 Toronto. Recheck current time before starting any optional work.
 
+## Status (November 8, 2026, evening)
+
+Ticked items were completed and checked in the repository. Unticked items need the author: confirming team details and publication preference, the final read and approval of claims, the merge into `main` so the public link shows the results, and the submission itself. The reproduction gate is ticked after the fresh-clone check.
+
 ## User actions
 
 - [ ] Register for the sprint and create the Adaption account with the same email.
-- [ ] Verify credited access; store an API key locally if live inference is desired.
+- [x] Verify credited access; store an API key locally if live inference is desired.
 - [ ] Confirm author names, affiliations, team name, emails, location, and publication-interest choice.
 - [ ] Read and approve the actual research claims and submission terms.
 - [ ] Submit through the event page and verify the confirmation email/PDF.
 
 ## Research gates
 
-- [ ] All results come from saved executions; no draft/example values remain.
-- [ ] Ground truth and minimal evidence are separate from monitor inputs.
-- [ ] Cross-agent necessity, legitimate twins and deterministic baselines checked.
-- [ ] Held-out split and primary protocol frozen before viewing results.
-- [ ] Every method's actual tokens, costs, invalid outputs and abstentions included.
-- [ ] Family counts, uncertainty, selected evidence and corruption semantics disclosed.
-- [ ] Null results and stopped extensions honestly reported.
-- [ ] Reproduction works from a fresh clone using public, sanitized artifacts.
+- [x] All results come from saved executions; no draft/example values remain.
+- [x] Ground truth and minimal evidence are separate from monitor inputs.
+- [x] Cross-agent necessity, legitimate twins and deterministic baselines checked.
+- [x] Held-out split and primary protocol frozen before viewing results.
+- [x] Every method's actual tokens, costs, invalid outputs and abstentions included.
+- [x] Family counts, uncertainty, selected evidence and corruption semantics disclosed.
+- [x] Null results and stopped extensions honestly reported.
+- [x] Reproduction works from a fresh clone using public, sanitized artifacts.
 
 ## Report gates
 
 - [ ] Use the [current official template](https://docs.google.com/document/d/1_1_27EyZriMlc8n8EBE2YScaeyMjm-8xjR097nmHXAE/copy?usp=sharing), not an old email attachment.
-- [ ] PDF no larger than 25 MB; at most 8 pages before references/appendices.
+- [x] PDF no larger than 25 MB; at most 8 pages before references/appendices.
 - [ ] Title, verified author information and 150–250-word abstract present.
-- [ ] Methods contain actual model IDs, prompts, sample counts, split, budgets and metrics.
-- [ ] Figures numbered, legible and captioned; exact denominators visible.
-- [ ] Required **Limitations and Dual-Use / Ethical Considerations** appendix present even though the generic template calls appendices optional.
-- [ ] Accurate LLM-use statement; no claim of human independent verification until it happens.
-- [ ] Prior work and any reused pre-sprint code identified in report and README.
+- [x] Methods contain actual model IDs, prompts, sample counts, split, budgets and metrics.
+- [x] Figures numbered, legible and captioned; exact denominators visible.
+- [x] Required **Limitations and Dual-Use / Ethical Considerations** appendix present even though the generic template calls appendices optional.
+- [x] Accurate LLM-use statement; no claim of human independent verification until it happens.
+- [x] Prior work and any reused pre-sprint code identified in report and README.
 - [ ] Every reference title, author/version and URL verified; no inaccessible-source findings represented as verified.
-- [ ] All template guidance and placeholder markers removed. Render and inspect every page.
+- [x] All template guidance and placeholder markers removed. Render and inspect every page.
 
 ## Upload gates
 
