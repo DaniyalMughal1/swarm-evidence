@@ -4,7 +4,7 @@ Source: [event guidelines and form](https://apartresearch.com/sprints/swarm-alig
 
 ## Status (November 8, 2026, evening)
 
-Ticked items were completed and checked in the repository. Unticked items need the author: confirming team details and publication preference, the final read and approval of claims, the merge into `main` so the public link shows the results, and the submission itself. The reproduction gate is ticked after the fresh-clone check.
+Ticked items were completed and checked in the repository. The completed project and final PDF are published on `main` through PR #1, and the public PDF was verified against the local submission copy. The author still needs to confirm submission-form details and publication preference, finish the final read and approval of claims, and submit. The reproduction gate is ticked after the fresh-clone check.
 
 ## User actions
 
@@ -41,7 +41,7 @@ Ticked items were completed and checked in the repository. Unticked items need t
 ## Upload gates
 
 - [ ] Select track 4 and, if the finished artifact supports it, track 1.
-- [ ] Public GitHub link opens without login and README matches completed work.
+- [x] Public GitHub link opens without login and README matches completed work.
 - [ ] Submit title, summary, final PDF, team details and publication preference.
 - [ ] Optional recording is accessible, 3–5 minutes and shows actual artifacts.
 - [ ] Optional slides/image respect form size limits; additional-material links work.

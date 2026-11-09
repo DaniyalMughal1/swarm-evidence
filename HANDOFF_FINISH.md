@@ -5,7 +5,8 @@
 > - The final analysis, figures, README results block and report PDF are regenerated from `results/calls/` and committed. `report/build_report.py` passes without `REPORT_DRAFT`, `python -m swarm_evidence audit-report` passes, and the offline tests pass with the 4 documented expected failures.
 > - Every change after the freeze, including those prompted by an independent AI-assisted review (OpenAI Codex), is in `protocol/POST_FREEZE_CHANGES.md`.
 > - Author: Daniyal Mughal, Independent Researcher. The human-review sentence in `report/llm_statement.txt` describes the author's reading as stated by the author; edit it if that changes before submission.
-> - Remaining for the author: final read of the PDF, approval to merge `implement-experiment` into `main`, and the submission itself.
+> - Published on `main` through [PR #1](https://github.com/DaniyalMughal1/swarm-evidence/pull/1) on November 8, 2026 (Toronto), following the author's instruction to publish the completed work. The public PDF matches the verified local submission copy. The final disclosure describes the author's requested review and directed revisions without asserting a completed comparison of drafts.
+> - Remaining for the author: final read of the PDF and submission through the event form. No further merge approval is needed for this release.
 
 
 Official deadline: **2026-11-09 06:59 Toronto** (Nov 8 23:59 AoE). Self-imposed target: submission-ready by **23:00 Toronto, Nov 8**. The user registers and submits. Do not contact the organizers.
